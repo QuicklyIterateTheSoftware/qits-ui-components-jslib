@@ -111,6 +111,18 @@ steps:
       ${QITS_NPM_REGISTRY_URL#http:}:_authToken=qits-ci
       EOF
 
+      # A VERSION BELOW THE REGISTRY'S `latest` IS A REPLAY, not a release. A bootstrap replays
+      # every version the estate still pins, onto a registry that may already hold a newer one.
+      # npm refuses to move `latest` backwards without an explicit tag, so such a publish claims
+      # the throwaway `replay` tag instead, and `main` stays where the real release left it.
+      replay=no
+      latest=$(npm view @qits/ui-components version 2>/dev/null || true)
+      order=$(node -p 'const p=v=>v.split(".").map(Number);const [a,b]=process.argv.slice(1).map(p);let r="same";for(let i=0;i<Math.max(a.length,b.length);i++){const x=a[i]||0,y=b[i]||0;if(x!==y){r=x<y?"below":"above";break}}r' "$version" "${latest:-0}")
+      if [ "$order" = below ]; then
+        echo "$version is below latest $latest — a replay: it takes the replay tag and leaves main alone"
+        replay=yes
+      fi
+
       # PUBLISH-IF-ABSENT, the same guard the push pipeline carries, and it earns its place here for
       # a sharper reason: an event can be redelivered and versions are immutable, so a second run of
       # one release must go green rather than fight the registry. Since the trigger is the tag, this
@@ -142,10 +154,15 @@ steps:
         exit 1
       fi
 
-      # NO --tag, DELIBERATELY: this is the real release, so claiming `latest` is what it is for.
-      # The registry allows it because it refuses only a move that goes *backwards*.
+      # NO --tag FOR A RELEASE, DELIBERATELY: claiming `latest` is what a release is for. The
+      # registry allows it because it refuses only a move that goes *backwards* — which is the
+      # replay case above, and that one publishes under `replay`.
       if [ "$publish_npm" = yes ]; then
-        npm publish ./dist/qits-spa-ui-components
+        if [ "$replay" = yes ]; then
+          npm publish ./dist/qits-spa-ui-components --tag replay
+        else
+          npm publish ./dist/qits-spa-ui-components
+        fi
       fi
 
       # AND `main` NAMES THE SAME VERSION. Not a second publish — `npm publish` can claim exactly one
@@ -164,8 +181,11 @@ steps:
       # first place and the reason the SBOM PUT below is unconditional: a redelivery whose publish
       # landed and whose tag move did not would skip the repair and report green, leaving `main` a
       # release behind with nothing saying so. Moving a tag onto the version it already names is what
-      # npm calls "already set" and costs one request.
-      npm dist-tag add "@qits/ui-components@$version" main
+      # npm calls "already set" and costs one request. A replay is the one exception: an older
+      # version must not pull `main` back.
+      if [ "$replay" = no ]; then
+        npm dist-tag add "@qits/ui-components@$version" main
+      fi
 
       # THE SBOM, WHICH IS THE TARBALL'S RESOLVED DEPENDENCY TREE. It goes up before the run goes
       # green, so the `SoftwareRelease` a real release announces can never name a version whose bill
