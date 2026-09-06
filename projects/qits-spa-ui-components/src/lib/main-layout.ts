@@ -650,6 +650,17 @@ interface QitsNavRow {
       .qits-layout-bar {
         border-right: 1px solid #e5e7eb;
       }
+      /* The panel opens to the RIGHT here, and only here. Below this breakpoint the bar spans the
+         viewport and the bolt sits at its right edge, so anchoring the panel's right edge grows it
+         leftward across the bar and it stays on screen. From 768px the bar is the FIRST GRID
+         COLUMN, 240px wide, so that same anchoring grows leftward out of a 240px box: up to 340px
+         of panel hanging off the left edge of the window, unreachable and unscrollable. Anchoring
+         to the bolt's left edge instead sends it across the content area, which is the widest
+         thing on the page and the only direction with room. */
+      .qits-layout-builds-panel {
+        right: auto;
+        left: 0;
+      }
       .qits-layout-burger {
         display: none;
       }
