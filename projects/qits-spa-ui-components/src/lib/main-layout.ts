@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   DOCUMENT,
   ElementRef,
   inject,
@@ -52,6 +53,25 @@ function link(origin: string | undefined, scope: QitsScope, path: string): strin
   return origin ? `${origin.replace(/\/+$/, '')}${tail}` : tail;
 }
 
+/** How often the panel's own clock moves while it is open. A second, because it counts seconds. */
+const QITS_BUILD_TICK_MS = 1000;
+
+/**
+ * The width of a step boundary on the expected-duration bar, as a percentage of the whole track.
+ * Small on purpose: it is a seam telling one step from the next, not a gap of its own meaning.
+ */
+const QITS_BUILD_STEP_GAP = 1;
+
+/** One step of a run's expected shape, as a box on the track. All three are percentages. */
+interface QitsBuildStep {
+  /** The step's share of the track, with the boundary gap that follows it already taken out. */
+  readonly width: number;
+  /** The boundary after it — zero for the last step, which keeps its whole share. */
+  readonly gap: number;
+  /** How much of this step's own box the run has done: 0 for a step not reached, 100 for one past. */
+  readonly fill: number;
+}
+
 /** One line of the pending-builds panel: a run, reduced to what a header affordance can show. */
 interface QitsBuildRow {
   readonly id: string;
@@ -61,6 +81,77 @@ interface QitsBuildRow {
   /** The pipeline file's name alone — the directories are the same for every run on the platform. */
   readonly config: string;
   readonly running: boolean;
+  /**
+   * Where the run itself lives in qits-ci, or `undefined` where the platform serves no ci host and
+   * there is no address this library can honestly spell.
+   */
+  readonly href?: string;
+  /** The expected shape of the run, or `undefined` where qits-ci predicted none. */
+  readonly steps?: readonly QitsBuildStep[];
+  /** The run has outrun its own prediction: the bar is full and it is still going. */
+  readonly overdue: boolean;
+  /** How long it has actually taken so far, already formatted. */
+  readonly elapsed: string;
+}
+
+/** `a` between `low` and `high`, both ends included. */
+function clamp(value: number, low: number, high: number): number {
+  return Math.min(high, Math.max(low, value));
+}
+
+function pad(value: number): string {
+  return value.toString().padStart(2, '0');
+}
+
+/**
+ * `41s`, `4m 12s`, `1h 04m` — a span, at the precision worth reading at that length.
+ *
+ * A **copy** of qits-ci's own `formatElapsed`, character for character, rather than an import: this
+ * package depends on no qits module, and a duration a reader sees in the bolt has to be the same
+ * string they see on the run page they click through to. Copying is the policy; drifting is not.
+ */
+function formatElapsed(millis: number): string {
+  const total = Math.max(0, Math.round(millis / 1000));
+  const seconds = total % 60;
+  const minutes = Math.floor(total / 60) % 60;
+  const hours = Math.floor(total / 3600);
+  if (hours > 0) return `${hours}h ${pad(minutes)}m`;
+  if (minutes > 0) return `${minutes}m ${pad(seconds)}s`;
+  return `${seconds}s`;
+}
+
+/** An ISO instant as epoch milliseconds — `undefined` for absent, empty or unparseable. */
+function instantMs(iso: string | undefined): number | undefined {
+  if (!iso) return undefined;
+  const millis = Date.parse(iso);
+  return Number.isNaN(millis) ? undefined : millis;
+}
+
+/**
+ * A run's expected shape as boxes across the track: each step's share of the whole, and how much of
+ * that step is done.
+ *
+ * <p>The boundary is <b>carved out of the step before it</b>, so two steps of 10s and 90s are a 9%
+ * box, a 1% seam and a 90% box: the widths and the seams still add to exactly 100, and the last
+ * step keeps its whole share because nothing follows it. A step too short to give a whole seam away
+ * gives what it has (`Math.min`), which is what keeps a sliver of a step from being drawn at a
+ * negative width and pushing the rest of the track off the end.
+ *
+ * <p>`doneMillis` is measured against the same expectations, so the fill is per step rather than one
+ * bar behind the boxes: the seams then stay the panel's own background as the fill crosses them,
+ * which is the whole point of drawing the steps at all.
+ */
+function buildSteps(expected: readonly number[], doneMillis: number): QitsBuildStep[] {
+  const total = expected.reduce((sum, step) => sum + step, 0);
+  const last = expected.length - 1;
+  let before = 0;
+  return expected.map((step, index) => {
+    const share = (100 * step) / total;
+    const gap = index === last ? 0 : Math.min(QITS_BUILD_STEP_GAP, share);
+    const fill = clamp((doneMillis - before) / step, 0, 1) * 100;
+    before += step;
+    return { width: share - gap, gap, fill };
+  });
 }
 
 /** One line of the sidebar. Headings and notes are rows too, so the order is stated in one list. */
@@ -112,9 +203,11 @@ interface QitsNavRow {
  *
  * **Beside it, the pending-builds bolt**, where an app provides `QITS_BUILDS` — a popover listing
  * what qits-ci is building and what is waiting for a worker, asked for when it opens and refreshed
- * while it stays open. It is a glance, not a page: four facts a row, and the run's own application
- * is one click away in the sidebar. Nothing is requested while it is shut, and a `/ci` that cannot
- * be reached is one quiet line inside the panel rather than anything the surrounding layout notices.
+ * while it stays open. It is a glance, not a page: four facts a row, and the row itself is the way
+ * into the run in qits-ci. Under the facts, where qits-ci predicted the run's steps, the expected
+ * shape of it as a segmented bar filling against a local clock, with what it has actually taken so
+ * far beside it. Nothing is requested while it is shut — and nothing ticks either — and a `/ci` that
+ * cannot be reached is one quiet line inside the panel rather than anything the layout notices.
  *
  * ## How a link gets into the sidebar — and how to add or move one
  *
@@ -263,14 +356,49 @@ interface QitsNavRow {
                 } @else {
                   <ul class="qits-layout-builds-list">
                     @for (run of buildRows(); track run.id) {
-                      <li class="qits-layout-build" [class.qits-layout-build-running]="run.running">
-                        <span class="qits-layout-build-name">{{ run.repoName }}</span>
-                        <qits-badge
-                          [label]="run.status"
-                          [tone]="run.running ? 'info' : 'neutral'"
-                        />
-                        <span class="qits-layout-build-branch">{{ run.branch }}</span>
-                        <span class="qits-layout-build-config">{{ run.config }}</span>
+                      <li>
+                        <!-- An anchor with no href where the platform names no ci host: HTML's own
+                             placeholder for a link that cannot be spelled, so the row keeps every
+                             fact it had and simply is not a destination. A full-document link on
+                             purpose — qits-ci is another application on a host of its own, and
+                             routerLink would compile and go nowhere. -->
+                        <a
+                          class="qits-layout-build"
+                          [class.qits-layout-build-running]="run.running"
+                          [attr.href]="run.href ?? null"
+                        >
+                          <span class="qits-layout-build-name">{{ run.repoName }}</span>
+                          <qits-badge
+                            [label]="run.status"
+                            [tone]="run.running ? 'info' : 'neutral'"
+                          />
+                          <span class="qits-layout-build-branch">{{ run.branch }}</span>
+                          <span class="qits-layout-build-config">{{ run.config }}</span>
+                          @if (run.steps; as steps) {
+                            <span class="qits-layout-build-duration">
+                              <!-- The shape is the number's picture, and the number is beside it:
+                                   nothing here is said only in geometry. -->
+                              <span class="qits-layout-build-track" aria-hidden="true">
+                                @for (step of steps; track $index) {
+                                  <span
+                                    class="qits-layout-build-step"
+                                    [style.width.%]="step.width"
+                                    [style.margin-right.%]="step.gap"
+                                  >
+                                    <span
+                                      class="qits-layout-build-step-fill"
+                                      [class.qits-layout-build-step-overdue]="run.overdue"
+                                      [style.width.%]="step.fill"
+                                    ></span>
+                                  </span>
+                                }
+                              </span>
+                              @if (run.elapsed) {
+                                <span class="qits-layout-build-elapsed">{{ run.elapsed }}</span>
+                              }
+                            </span>
+                          }
+                        </a>
                       </li>
                     }
                   </ul>
@@ -495,7 +623,12 @@ interface QitsNavRow {
       gap: 2px;
     }
     /* Two lines' worth of facts on one row: what is being built and how far it has got above, where
-       from and by which pipeline below, quieter. */
+       from and by which pipeline below, quieter — and under both, where the run has got to.
+
+       The row is an anchor, so it says out loud that it is text and not a decorated link: the
+       colours are the ones each cell already carried, and the underline would cut across four of
+       them. Hover and focus are keyed on [href], because a row the platform gave no address is
+       drawn by exactly these rules minus the ones that promise a destination. */
     .qits-layout-build {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -505,6 +638,15 @@ interface QitsNavRow {
       border-radius: 6px;
       border-left: 2px solid transparent;
       font-size: 13px;
+      color: inherit;
+      text-decoration: none;
+    }
+    .qits-layout-build[href]:hover {
+      background: #f3f4f6;
+    }
+    .qits-layout-build[href]:focus-visible {
+      outline: 2px solid #1d4ed8;
+      outline-offset: -2px;
     }
     /* A run under way is the one that will change while the panel is open, so it carries the rail
        as well as the badge's tone — colour alone would be the only thing telling the two apart. */
@@ -531,6 +673,54 @@ interface QitsNavRow {
     }
     .qits-layout-build-config {
       text-align: right;
+    }
+
+    /* The expected shape of the run, across the whole row: the track is the prediction and the
+       number beside it is what the run has actually taken, so the two can be read against each
+       other without either being the only statement. Full width because a bar as wide as one cell
+       of a two-column grid would be a decoration rather than a measure. */
+    .qits-layout-build-duration {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+    .qits-layout-build-track {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      height: 4px;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    /* A step is a box of the track it is expected to take; the seam after it is that box's own
+       margin, so the boxes and the seams add to exactly the track and nothing has to be rounded
+       away. The unfilled tone is the panel's border grey — this is a measure, not a control. */
+    .qits-layout-build-step {
+      display: block;
+      flex: none;
+      height: 100%;
+      background: #e5e7eb;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .qits-layout-build-step-fill {
+      display: block;
+      height: 100%;
+      background: #1d4ed8;
+      border-radius: 2px;
+    }
+    /* Past its prediction and still going. A quieter tone rather than an alarming one: a slow run
+       is not a failing one, and the bar being full is already the loud part. */
+    .qits-layout-build-step-overdue {
+      background: #93a3c8;
+    }
+    .qits-layout-build-elapsed {
+      flex: none;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      color: #6b7280;
     }
 
     .qits-layout-nav {
@@ -861,19 +1051,64 @@ export class QitsMainLayout {
   protected readonly buildsFailed = computed(() => this.builds?.failed() ?? false);
 
   /**
+   * The panel's own clock, and the second half of the cost model the panel is.
+   *
+   * A run's bar and the number beside it grow while nobody touches anything, and that growth is a
+   * subtraction rather than news: re-reading qits-ci to learn what `now - startedAt` already knows
+   * would turn a panel somebody left open into traffic. So the clock ticks locally, at one second
+   * because the numbers are in seconds — and only while the panel is open, exactly as the poll is.
+   */
+  private readonly now = signal(Date.now());
+  private ticker: ReturnType<typeof setInterval> | undefined = undefined;
+
+  constructor() {
+    // A navigation away from a page with the panel open destroys the component and nothing else
+    // would ever call `setBuildsOpen(false)`; the interval would outlive the chrome that reads it.
+    inject(DestroyRef).onDestroy(() => this.tick(false));
+  }
+
+  /**
    * The panel's rows. The pipeline's *file name* is what is shown: every run on this platform
    * carries the same `.config/qits/` in front of it, and the name is the part that differs.
+   *
+   * <p>Each row is a link into qits-ci, at the address the reader came in through — the scope is
+   * how a run page says which project or repository it was opened from, and the run resolves by its
+   * id in every form. A platform serving no ci host gives no href, and the row is drawn as the text
+   * it always was rather than as a link to nowhere.
+   *
+   * <p>Recomputed on every tick, which is what makes the bar and the number move. Nothing else in
+   * the chrome reads the clock, so a closed panel recomputes nothing at all.
    */
-  protected readonly buildRows = computed<readonly QitsBuildRow[]>(() =>
-    (this.builds?.runs() ?? []).map((run) => ({
-      id: run.id,
-      repoName: run.repoName,
-      branch: run.branch,
-      status: run.status,
-      config: buildConfigName(run.configPath),
-      running: run.status === QITS_BUILD_RUNNING,
-    })),
-  );
+  protected readonly buildRows = computed<readonly QitsBuildRow[]>(() => {
+    const now = this.now();
+    const scope = this.scope();
+    return (this.builds?.runs() ?? []).map((run) => {
+      const running = run.status === QITS_BUILD_RUNNING;
+      const startedAt = instantMs(run.startedAt);
+      const createdAt = instantMs(run.createdAt);
+      // A run under way is timed from the moment a worker took it; one that is not is still
+      // waiting, and how long it has been waiting is what a reader wants of it.
+      const since = running ? (startedAt ?? createdAt) : createdAt;
+      const expected = run.expectedStepDurationsMillis;
+      const total = expected?.reduce((sum, step) => sum + step, 0) ?? 0;
+      // Only a running run has got anywhere: a queued one shows the shape of what it will do, empty.
+      const taken = running && startedAt !== undefined ? Math.max(0, now - startedAt) : 0;
+      return {
+        id: run.id,
+        repoName: run.repoName,
+        branch: run.branch,
+        status: run.status,
+        config: buildConfigName(run.configPath),
+        running,
+        href: this.appLinks.href('qits-ci', `runs/${run.id}`, scope),
+        // Past the prediction the bar stays full rather than overflowing: the run is late, which is
+        // a different fact from the bar being wrong, and the number beside it keeps counting.
+        steps: expected && total > 0 ? buildSteps(expected, Math.min(taken, total)) : undefined,
+        overdue: total > 0 && taken > total,
+        elapsed: since === undefined ? '' : formatElapsed(now - since),
+      };
+    });
+  });
 
   protected toggleBuilds(): void {
     this.setBuildsOpen(!this.buildsOpen());
@@ -899,10 +1134,31 @@ export class QitsMainLayout {
       ?.focus({ preventScroll: true });
   }
 
-  /** One place where the panel's state and the source's polling are said in the same breath. */
+  /**
+   * One place where the panel's state, the source's polling and the local clock are said in the
+   * same breath. All three start together and all three stop together, which is the only way the
+   * "nothing happens while it is closed" promise stays true of every one of them.
+   */
   private setBuildsOpen(open: boolean): void {
     this.buildsOpen.set(open);
     this.builds?.watch(open);
+    this.tick(open);
+  }
+
+  /**
+   * Start or stop the clock. Idempotent for the reason the source's `watch` is — the layout says
+   * "open" on every toggle — and it sets the time once on opening, so the first paint of a panel
+   * reopened an hour later is not an hour behind.
+   */
+  private tick(running: boolean): void {
+    if (running === (this.ticker !== undefined)) return;
+    if (!running) {
+      clearInterval(this.ticker);
+      this.ticker = undefined;
+      return;
+    }
+    this.now.set(Date.now());
+    this.ticker = setInterval(() => this.now.set(Date.now()), QITS_BUILD_TICK_MS);
   }
 
   protected onProject(projectSlug: string | undefined): void {

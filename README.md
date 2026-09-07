@@ -329,7 +329,10 @@ bootstrapApplication(App, {
       "branch": "release/7f3c2a",
       "status": "RUNNING",
       "configPath": ".config/qits/ci-event-release-request.yml",
-      "commitSha": "18f7422"
+      "commitSha": "18f7422",
+      "createdAt": "2026-09-07T11:58:00Z",
+      "startedAt": "2026-09-07T11:59:00Z",
+      "expectedStepDurationsMillis": [12000, 95000, 60000, 25000]
     }
   ]
 }
@@ -339,11 +342,11 @@ bootstrapApplication(App, {
 reason: the edge routes `/ci` on every vhost, so the browser's own session reaches qits-ci with no
 machine token, no CORS pre-flight and no origin compiled in here.
 
-The panel is the whole cost model. Nothing is asked while it is closed; opening it reads once and
-again every five seconds; closing it stops the timer, cancels a read in flight and **forgets the
-answer**, because a queue from an hour ago painted as now is worse than a pending state that
-resolves in a moment. It closes on Escape — handing the focus back to the bolt — and on a click
-outside itself.
+The panel is the whole cost model. Nothing is asked while it is closed — and nothing ticks either;
+opening it reads once and again every five seconds; closing it stops the timer, cancels a read in
+flight and **forgets the answer**, because a queue from an hour ago painted as now is worse than a
+pending state that resolves in a moment. It closes on Escape — handing the focus back to the bolt —
+and on a click outside itself.
 
 Each row is four facts: the repository, the status, the branch, and the pipeline file's **name**
 (`ci-event-release-request.yml`), since every run on this platform shares the directories in front of
@@ -351,6 +354,30 @@ it. A
 `RUNNING` run carries the info tone and a rail down its left; anything else is neutral, so the two
 are told apart by more than a colour. The status word is whatever qits-ci said, upper-cased and
 never narrowed: a state this library does not know is still a pending build.
+
+**The row is the way into the run.** It links to `runs/<id>` on the ci host, at the scope path the
+reader came in through — `QitsAppLinks.href('qits-ci', …)`, a full-document navigation, because
+qits-ci is another application on a host of its own. A platform that names no ci host gives no
+honest address, and the row is then the same four facts as text rather than a link to nowhere.
+
+**And, where qits-ci predicted one, the run's expected shape.** `expectedStepDurationsMillis` is one
+p95 per pipeline step, and the bar under the facts is that prediction drawn to scale: the track is
+divided per step in proportion to how long each is expected to take, with a small seam at every
+boundary — two steps of 10s and 90s are 9%, a 1% seam, 90%, the seam carved out of the step _before_
+it so the last step keeps its whole share. A `RUNNING` run fills it left to right against
+`now - startedAt`; one still queued shows the shape empty. Past the prediction the bar stays full in
+a quieter tone rather than overflowing: late is a fact about the run, not a wider track.
+
+Beside the bar, what the run has **actually** taken — since `startedAt` for one under way, since
+`createdAt` for one still waiting, rendered `41s` / `4m 12s` / `1h 04m` exactly as qits-ci's own run
+page renders it. It ticks off a **local** clock, once a second, while the panel is open and never
+otherwise: `now - startedAt` is a subtraction, and polling qits-ci to learn what a subtraction knows
+would turn a panel somebody left open into traffic.
+
+All three fields are optional on the wire. A run that carries none of them — an older qits-ci, a
+pipeline nobody has measured yet — is drawn exactly as every row was before there was a bar to draw,
+and a prediction with one unusable entry is dropped whole, because the segments are proportions of
+one another and a wrong shape is worse than no shape.
 
 An empty queue says "Nothing building.", a read still in flight "Checking…", and a `/ci` that could
 not be reached one quiet line — "Builds unavailable." — inside the panel. That last one is the

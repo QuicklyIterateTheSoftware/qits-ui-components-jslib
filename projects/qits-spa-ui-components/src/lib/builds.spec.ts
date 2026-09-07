@@ -54,6 +54,55 @@ describe('toBuilds', () => {
     expect(toBuilds(null)).toEqual([]);
     expect(toBuilds({})).toEqual([]);
   });
+
+  /** The clocks a panel ticks against, and the shape it draws — all three optional on the wire. */
+  it('carries the two clocks and the prediction through as qits-ci stated them', () => {
+    const [run] = toBuilds({
+      runs: [
+        {
+          id: 'run-1',
+          repoName: 'qits-ci-service',
+          status: 'RUNNING',
+          createdAt: '2026-09-07T11:58:00Z',
+          startedAt: '2026-09-07T11:59:00Z',
+          expectedStepDurationsMillis: [10_000, 90_000],
+        },
+      ],
+    });
+
+    // Strings, not `Date`s: the row is listed far more often than it is timed against.
+    expect(run.createdAt).toBe('2026-09-07T11:58:00Z');
+    expect(run.startedAt).toBe('2026-09-07T11:59:00Z');
+    expect(run.expectedStepDurationsMillis).toEqual([10_000, 90_000]);
+  });
+
+  it('reads a run that has none of them as a run that simply has none', () => {
+    const [run] = toBuilds({
+      runs: [{ id: 'run-1', repoName: 'r', status: 'QUEUED', startedAt: null }],
+    });
+
+    expect(run.createdAt).toBeUndefined();
+    // Queued: no worker has taken it, so there is no start to speak of.
+    expect(run.startedAt).toBeUndefined();
+    expect(run.expectedStepDurationsMillis).toBeUndefined();
+  });
+
+  /**
+   * The bar's segments are proportions of one another, so a single unusable entry would silently
+   * redraw the shape of every other step. No prediction is a true statement; a wrong one is not.
+   */
+  it('drops a whole prediction it cannot draw honest proportions from', () => {
+    expect(
+      toBuilds({
+        runs: [
+          { id: 'a', repoName: 'r', expectedStepDurationsMillis: [] },
+          { id: 'b', repoName: 'r', expectedStepDurationsMillis: [10_000, 0] },
+          { id: 'c', repoName: 'r', expectedStepDurationsMillis: [10_000, -5] },
+          { id: 'd', repoName: 'r', expectedStepDurationsMillis: null },
+        ],
+      }).map((run) => run.expectedStepDurationsMillis),
+    ).toEqual([undefined, undefined, undefined, undefined]);
+  });
 });
 
 describe('buildConfigName', () => {
@@ -97,6 +146,31 @@ describe('provideQitsBuilds', () => {
 
     expect(builds.runs()).toHaveLength(1);
     expect(builds.failed()).toBe(false);
+  });
+
+  /** The fields the bar is drawn from reach the panel through the read, not only through mapping. */
+  it('answers with the clocks and the prediction the read carried', () => {
+    const builds = source();
+    builds.watch(true);
+    http()
+      .expectOne(QITS_BUILDS_URL)
+      .flush({
+        runs: [
+          {
+            id: 'run-1',
+            repoName: 'qits-ci-service',
+            status: 'RUNNING',
+            createdAt: '2026-09-07T11:58:00Z',
+            startedAt: '2026-09-07T11:59:00Z',
+            expectedStepDurationsMillis: [10_000, 90_000],
+          },
+        ],
+      });
+
+    const [run] = builds.runs() ?? [];
+    expect(run.startedAt).toBe('2026-09-07T11:59:00Z');
+    expect(run.createdAt).toBe('2026-09-07T11:58:00Z');
+    expect(run.expectedStepDurationsMillis).toEqual([10_000, 90_000]);
   });
 
   it('asks again every few seconds while it stays open', () => {

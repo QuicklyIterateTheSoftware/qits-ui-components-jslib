@@ -59,8 +59,11 @@ for specs and stories. A non-empty `[links]` input overrides both.
 
 `provideQitsBuilds()` adds the pending-builds bolt beside the project picker: a popover of what
 qits-ci is building and what is queued, read from `/ci/api/runs/active` when it opens and every five
-seconds while it stays open — and nothing at all while it is closed. No provider, no bolt; an
-unreachable `/ci` is one quiet line inside the panel. `provideQitsBuildList([…])` is the literal form.
+seconds while it stays open — and nothing at all while it is closed. Each row links into the run on
+the ci host, and where qits-ci predicted the run's steps it draws them to scale as a segmented bar,
+filling against a local one-second clock with the time actually taken beside it. No provider, no
+bolt; an unreachable `/ci` is one quiet line inside the panel. `provideQitsBuildList([…])` is the
+literal form.
 
 An app can hang its own menu under its own entry with `<ng-template qitsNavSubmenu>` — declared in
 the app shell beside the `<router-outlet />`, never inside a page, or it is rebuilt on every

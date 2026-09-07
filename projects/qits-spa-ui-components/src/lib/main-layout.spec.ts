@@ -1,5 +1,12 @@
 import { provideLocationMocks } from '@angular/common/testing';
-import { Component, signal, viewChild, type TemplateRef } from '@angular/core';
+import {
+  Component,
+  signal,
+  viewChild,
+  type EnvironmentProviders,
+  type Provider,
+  type TemplateRef,
+} from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
@@ -16,7 +23,7 @@ import {
 } from './navigation';
 import { provideQitsProjectList, QITS_PROJECTS, type QitsProject } from './projects';
 import { provideQitsRepositoryList, QITS_REPOSITORIES, type QitsRepository } from './repositories';
-import { provideQitsScope, type QitsRouting } from './scope';
+import { provideQitsScope, QITS_SCOPE, type QitsRouting, type QitsScope } from './scope';
 
 describe('QitsMainLayout', () => {
   const PLATFORM: readonly QitsNavLink[] = [
@@ -1097,7 +1104,11 @@ describe('QitsMainLayout', () => {
      */
     function renderBuilds(
       runs: readonly QitsBuild[] | undefined,
-      options?: { readonly failed?: boolean },
+      options?: {
+        readonly failed?: boolean;
+        /** Overrides, last word wins — how a test says the platform *does* serve a ci host. */
+        readonly providers?: readonly (Provider | EnvironmentProviders)[];
+      },
     ): ComponentFixture<QitsMainLayout> {
       watched = [];
       const source: QitsBuildsSource = {
@@ -1108,8 +1119,11 @@ describe('QitsMainLayout', () => {
       TestBed.configureTestingModule({
         providers: [
           provideRouter([]),
+          // The flat shape names no ci host and carries no environment origin, so this is also the
+          // platform on which a run has no address at all — the degraded case, by default.
           provideQitsNavigationLinks(PLATFORM),
           { provide: QITS_BUILDS, useValue: source },
+          ...(options?.providers ?? []),
         ],
       });
       const fixture = TestBed.createComponent(QitsMainLayout);
@@ -1248,6 +1262,288 @@ describe('QitsMainLayout', () => {
       expect(watched).toEqual([true, false]);
       expect(fixture.nativeElement.contains(document.activeElement)).toBe(true);
       expect(document.activeElement).toBe(bolt(fixture));
+    });
+
+    /**
+     * A glance that goes somewhere. The row is the way into the run, at the address the reader came
+     * in through — and where the platform names no ci host it is the same four facts as text,
+     * because a link to nowhere is worse than no link.
+     */
+    describe('the way into the run', () => {
+      const CI_ORIGIN = 'https://ci.dev.example.com';
+
+      /** The platform serving qits-ci on a host of its own, with a repository on screen. */
+      function servingCi(scope: QitsScope): (Provider | EnvironmentProviders)[] {
+        return [
+          provideQitsNavigationTree({
+            environment: 'dev',
+            origin: 'https://dev.example.com',
+            slots: {
+              'services.details': [
+                {
+                  app: 'qits-ci',
+                  label: 'CI',
+                  host: 'ci',
+                  path: '/ci',
+                  origin: CI_ORIGIN,
+                  position: 1,
+                },
+              ],
+            },
+          }),
+          {
+            provide: QITS_SCOPE,
+            useValue: {
+              scope: signal(scope),
+              projectId: signal(undefined),
+              repositoryId: signal(undefined),
+              routing: 'repository' as const,
+              select: () => undefined,
+            },
+          },
+        ];
+      }
+
+      it('opens the run in qits-ci, at the address the reader came in through', () => {
+        const fixture = renderBuilds(RUNS, {
+          providers: servingCi({
+            project: 'qits',
+            group: 'qits-ci',
+            repository: 'qits-ci-service',
+          }),
+        });
+        open(fixture);
+
+        const [first, second] = rows(fixture);
+        expect(first.tagName).toBe('A');
+        // A full-document href, never a routerLink: qits-ci is another application on its own host.
+        expect(first.getAttribute('href')).toBe(
+          `${CI_ORIGIN}/qits/qits-ci/qits-ci-service/runs/run-1`,
+        );
+        expect(second.getAttribute('href')).toBe(
+          `${CI_ORIGIN}/qits/qits-ci/qits-ci-service/runs/run-2`,
+        );
+        expect(first.hasAttribute('ng-reflect-router-link')).toBe(false);
+      });
+
+      /** Out of a project's page there is no repository in the address, and the run still resolves. */
+      it('spells the scope it has, however shallow the page is', () => {
+        const fixture = renderBuilds(RUNS, { providers: servingCi({ project: 'qits' }) });
+        open(fixture);
+        expect(rows(fixture)[0].getAttribute('href')).toBe(`${CI_ORIGIN}/qits/runs/run-1`);
+      });
+
+      it('draws the row as the text it always was where the platform serves no ci', () => {
+        const fixture = renderBuilds(RUNS);
+        open(fixture);
+
+        const first = rows(fixture)[0];
+        expect(first.hasAttribute('href')).toBe(false);
+        // Not a link, but not a row that lost anything either.
+        expect(first.querySelector('.qits-layout-build-name')?.textContent?.trim()).toBe(
+          'qits-ci-service',
+        );
+        expect(first.querySelector('.qits-badge')?.textContent?.trim()).toBe('RUNNING');
+        expect(first.querySelector('.qits-layout-build-branch')?.textContent?.trim()).toBe('main');
+        expect(first.querySelector('.qits-layout-build-config')?.textContent?.trim()).toBe(
+          'ci-post-receive.yml',
+        );
+      });
+    });
+
+    /**
+     * The expected shape of a run, and what it has actually taken. The clock is fixed here on
+     * purpose: every number below is a subtraction the panel does locally, and a spec that let the
+     * real clock move would be asserting the machine's speed rather than the arithmetic.
+     */
+    describe('the expected-duration bar', () => {
+      /** Ten seconds then ninety — the example the bar is specified by. */
+      const EXPECTED = [10_000, 90_000] as const;
+      const NOW = Date.parse('2026-09-07T12:00:00.000Z');
+
+      /** An ISO instant `seconds` before the fixed now. */
+      function ago(seconds: number): string {
+        return new Date(NOW - seconds * 1000).toISOString();
+      }
+
+      function predicted(run: Partial<QitsBuild> & { readonly status: string }): QitsBuild {
+        return {
+          id: 'run-1',
+          repoName: 'qits-ci-service',
+          branch: 'main',
+          configPath: '.config/qits/ci-post-receive.yml',
+          expectedStepDurationsMillis: [...EXPECTED],
+          ...run,
+        };
+      }
+
+      function bars(fixture: ComponentFixture<unknown>): HTMLElement[] {
+        return [
+          ...fixture.nativeElement.querySelectorAll('.qits-layout-build-duration'),
+        ] as HTMLElement[];
+      }
+
+      function steps(fixture: ComponentFixture<unknown>): HTMLElement[] {
+        return [
+          ...fixture.nativeElement.querySelectorAll('.qits-layout-build-step'),
+        ] as HTMLElement[];
+      }
+
+      /** A percentage off a style binding — absent reads as zero, which is what absent means here. */
+      function percent(element: HTMLElement, property: 'width' | 'marginRight'): number {
+        return parseFloat(element.style[property] || '0');
+      }
+
+      function fills(fixture: ComponentFixture<unknown>): number[] {
+        return steps(fixture).map((step) =>
+          percent(step.querySelector('.qits-layout-build-step-fill') as HTMLElement, 'width'),
+        );
+      }
+
+      function elapsed(fixture: ComponentFixture<unknown>): (string | undefined)[] {
+        return [...fixture.nativeElement.querySelectorAll('.qits-layout-build-elapsed')].map((n) =>
+          (n as HTMLElement).textContent?.trim(),
+        );
+      }
+
+      beforeEach(() => vi.useFakeTimers({ now: NOW }));
+      afterEach(() => vi.useRealTimers());
+
+      /** The old service, and every run of a pipeline nobody has measured yet. */
+      it('draws no bar at all for a run qits-ci predicted nothing about', () => {
+        const fixture = renderBuilds(RUNS);
+        open(fixture);
+        expect(bars(fixture)).toEqual([]);
+        expect(elapsed(fixture)).toEqual([]);
+      });
+
+      /**
+       * 10s and 90s of a 100s run are 9% + a 1% seam + 90%: the boundary is carved out of the step
+       * BEFORE it, so the last step keeps its whole share and the track still adds to exactly 100.
+       */
+      it('divides the track per step, with a seam before each boundary', () => {
+        const fixture = renderBuilds([predicted({ status: 'QUEUED', createdAt: ago(30) })]);
+        open(fixture);
+
+        const [short, long] = steps(fixture);
+        expect(percent(short, 'width')).toBeCloseTo(9);
+        expect(percent(short, 'marginRight')).toBeCloseTo(1);
+        expect(percent(long, 'width')).toBeCloseTo(90);
+        expect(percent(long, 'marginRight')).toBeCloseTo(0);
+        expect(
+          percent(short, 'width') +
+            percent(short, 'marginRight') +
+            percent(long, 'width') +
+            percent(long, 'marginRight'),
+        ).toBeCloseTo(100);
+      });
+
+      /** A step too short to give a whole seam away gives what it has, and never a negative width. */
+      it('never draws a sliver of a step at a negative width', () => {
+        const fixture = renderBuilds([
+          predicted({
+            status: 'QUEUED',
+            createdAt: ago(1),
+            expectedStepDurationsMillis: [200, 99_800],
+          }),
+        ]);
+        open(fixture);
+
+        const [sliver] = steps(fixture);
+        expect(percent(sliver, 'width')).toBeGreaterThanOrEqual(0);
+        expect(percent(sliver, 'width')).toBeCloseTo(0);
+        expect(percent(sliver, 'marginRight')).toBeCloseTo(0.2);
+      });
+
+      it('shows a run waiting for a worker the shape of what it will do, empty', () => {
+        const fixture = renderBuilds([predicted({ status: 'QUEUED', createdAt: ago(30) })]);
+        open(fixture);
+        expect(bars(fixture)).toHaveLength(1);
+        expect(fills(fixture)).toEqual([0, 0]);
+      });
+
+      /** Fifty seconds into a hundred: the first step is done and the second is 40/90 through it. */
+      it('fills left to right against the clock, step by step', () => {
+        const fixture = renderBuilds([
+          predicted({ status: 'RUNNING', createdAt: ago(60), startedAt: ago(50) }),
+        ]);
+        open(fixture);
+
+        const [first, second] = fills(fixture);
+        expect(first).toBeCloseTo(100);
+        expect(second).toBeCloseTo((40 / 90) * 100);
+      });
+
+      /**
+       * Past its prediction and still going. The bar stays full rather than overflowing — being
+       * late is a fact about the run, not a reason to draw a wider track than there is.
+       */
+      it('keeps the bar full, in another tone, for a run that has outrun its prediction', () => {
+        const fixture = renderBuilds([
+          predicted({ status: 'RUNNING', createdAt: ago(160), startedAt: ago(150) }),
+        ]);
+        open(fixture);
+
+        expect(fills(fixture)).toEqual([100, 100]);
+        expect(steps(fixture).map((step) => percent(step, 'width'))).toEqual([9, 90]);
+        expect(
+          fixture.nativeElement.querySelectorAll('.qits-layout-build-step-overdue'),
+        ).toHaveLength(2);
+        expect(elapsed(fixture)).toEqual(['2m 30s']);
+      });
+
+      /**
+       * A run under way is timed from when a worker took it; one still waiting from when it was
+       * asked for — which is the only number that says anything about a queue.
+       */
+      it('times a run under way from its start and a queued one from its request', () => {
+        const fixture = renderBuilds([
+          predicted({ id: 'run-1', status: 'RUNNING', createdAt: ago(3600), startedAt: ago(41) }),
+          predicted({ id: 'run-2', status: 'QUEUED', createdAt: ago(252) }),
+          predicted({ id: 'run-3', status: 'QUEUED', createdAt: ago(3840) }),
+        ]);
+        open(fixture);
+        // The same rendering qits-ci's own run page gives the same spans.
+        expect(elapsed(fixture)).toEqual(['41s', '4m 12s', '1h 04m']);
+      });
+
+      /**
+       * The number moves without anything being asked for. That is the whole reason it ticks
+       * locally: `now - startedAt` is a subtraction, and polling qits-ci to learn it would turn a
+       * panel somebody left open into traffic.
+       */
+      it('ticks the number every second while the panel is open, and stops when it closes', () => {
+        const fixture = renderBuilds([
+          predicted({ status: 'RUNNING', createdAt: ago(60), startedAt: ago(41) }),
+        ]);
+        const idle = vi.getTimerCount();
+
+        open(fixture);
+        expect(vi.getTimerCount()).toBe(idle + 1);
+        expect(elapsed(fixture)).toEqual(['41s']);
+
+        vi.advanceTimersByTime(1000);
+        fixture.detectChanges();
+        expect(elapsed(fixture)).toEqual(['42s']);
+        // And the bar moved with it: one more second of the second step.
+        expect(fills(fixture)[1]).toBeCloseTo((32 / 90) * 100);
+
+        // Closed, nothing ticks — exactly as nothing is asked for.
+        open(fixture);
+        expect(vi.getTimerCount()).toBe(idle);
+      });
+
+      it('stops the clock when the chrome itself goes away', () => {
+        const fixture = renderBuilds([
+          predicted({ status: 'RUNNING', createdAt: ago(60), startedAt: ago(41) }),
+        ]);
+        const idle = vi.getTimerCount();
+        open(fixture);
+        expect(vi.getTimerCount()).toBe(idle + 1);
+
+        fixture.destroy();
+        expect(vi.getTimerCount()).toBe(idle);
+      });
     });
   });
 });

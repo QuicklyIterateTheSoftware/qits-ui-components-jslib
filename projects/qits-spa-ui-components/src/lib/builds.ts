@@ -31,6 +31,19 @@ export interface QitsBuild {
   /** The pipeline file, as the run names it — `.config/qits/ci-post-receive.yml`. */
   readonly configPath: string;
   readonly commitSha?: string;
+  /** When the run was asked for, as an ISO instant — the clock a run still waiting is timed from. */
+  readonly createdAt?: string;
+  /** When a worker picked it up, as an ISO instant. Absent for as long as the run is queued. */
+  readonly startedAt?: string;
+  /**
+   * How long qits-ci expects each step of this pipeline to take, in order, in milliseconds — its
+   * p95 of what the same step took before.
+   *
+   * Absent where it has nothing to predict from: a pipeline that has never run, or a service too
+   * old to say. The panel draws the run's expected shape where there is one and says nothing at all
+   * where there is not, which is the only honest pair of states for a prediction.
+   */
+  readonly expectedStepDurationsMillis?: readonly number[];
 }
 
 /** The body qits-ci answers the active listing with. Every field optional: this is another service. */
@@ -42,6 +55,9 @@ export interface QitsBuildRuns {
     readonly status?: string;
     readonly configPath?: string;
     readonly commitSha?: string;
+    readonly createdAt?: string | null;
+    readonly startedAt?: string | null;
+    readonly expectedStepDurationsMillis?: readonly number[] | null;
   }[];
 }
 
@@ -80,6 +96,22 @@ export function buildConfigName(configPath: string | undefined): string {
   return trimmed.slice(trimmed.lastIndexOf('/') + 1);
 }
 
+/**
+ * The predicted step durations, or nothing at all.
+ *
+ * **One unusable entry drops the whole prediction.** The bar the panel draws from this is a set of
+ * proportions of one another, so a step whose expectation is missing, zero or not a number would
+ * quietly redraw the shape of every *other* step rather than only its own — a wrong picture, where
+ * no picture is a true statement about a run qits-ci cannot predict.
+ */
+function toExpectations(values: unknown): readonly number[] | undefined {
+  if (!Array.isArray(values) || values.length === 0) return undefined;
+  const usable = values.every(
+    (value) => typeof value === 'number' && Number.isFinite(value) && value > 0,
+  );
+  return usable ? (values as readonly number[]) : undefined;
+}
+
 /** A row with neither an id nor a repository is not something the panel can draw a line for. */
 function toBuild(row: NonNullable<QitsBuildRuns['runs']>[number]): QitsBuild | undefined {
   if (!row?.id || !row.repoName) return undefined;
@@ -90,6 +122,11 @@ function toBuild(row: NonNullable<QitsBuildRuns['runs']>[number]): QitsBuild | u
     status: (row.status ?? '').toUpperCase(),
     configPath: row.configPath ?? '',
     commitSha: row.commitSha || undefined,
+    // Timestamps are carried as the strings the service sent them as, not parsed here: a run that
+    // is only listed has no need of a `Date`, and the panel that ticks against them parses once.
+    createdAt: row.createdAt || undefined,
+    startedAt: row.startedAt || undefined,
+    expectedStepDurationsMillis: toExpectations(row.expectedStepDurationsMillis),
   };
 }
 

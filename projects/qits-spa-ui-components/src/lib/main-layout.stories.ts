@@ -170,7 +170,18 @@ const DEMO_REPOSITORIES: readonly QitsRepository[] = [
   { id: 'r5', name: 'qits-eventstream', category: 'libs' },
 ];
 
-/** What qits-ci has in hand: one build under way, two waiting for a worker. */
+/** An instant `seconds` ago — so the workbench's runs are as old as the page is, not as old as it. */
+function ago(seconds: number): string {
+  return new Date(Date.now() - seconds * 1000).toISOString();
+}
+
+/**
+ * What qits-ci has in hand: one build under way, two waiting for a worker.
+ *
+ * The first two carry `expectedStepDurationsMillis`, so the panel draws their expected shape — one
+ * filling against it, one waiting with the shape still empty. The third carries none, which is what
+ * a pipeline nobody has measured yet looks like, and it is drawn exactly as every row was before.
+ */
 const DEMO_BUILDS: readonly QitsBuild[] = [
   {
     id: 'run-1',
@@ -179,6 +190,10 @@ const DEMO_BUILDS: readonly QitsBuild[] = [
     status: 'RUNNING',
     configPath: '.config/qits/ci-post-receive.yml',
     commitSha: '18f7422',
+    createdAt: ago(96),
+    startedAt: ago(88),
+    // Checkout, build, test, publish: four steps of a Java service, as qits-ci has seen them.
+    expectedStepDurationsMillis: [12_000, 95_000, 60_000, 25_000],
   },
   {
     id: 'run-2',
@@ -186,6 +201,8 @@ const DEMO_BUILDS: readonly QitsBuild[] = [
     branch: 'feature/bus-split',
     status: 'QUEUED',
     configPath: '.config/qits/ci-post-receive.yml',
+    createdAt: ago(42),
+    expectedStepDurationsMillis: [10_000, 90_000],
   },
   {
     id: 'run-3',
@@ -193,6 +210,7 @@ const DEMO_BUILDS: readonly QitsBuild[] = [
     branch: 'main',
     status: 'QUEUED',
     configPath: '.config/qits/ci-event-release.yml',
+    createdAt: ago(9),
   },
 ];
 
@@ -423,13 +441,27 @@ export const ProjectsUnavailable: Story = {
  * page of every application. A run under way carries the info tone and a rail down its left; one
  * waiting for a worker is neutral, so the two are told apart by more than a colour.
  *
+ * Under the facts, where qits-ci predicted the run's steps, its **expected shape**: the track is
+ * divided per step in proportion to how long each is expected to take, with a seam at every
+ * boundary, and it fills left to right against a local clock. Beside it, what the run has actually
+ * taken so far — ticking, once a second, while the panel is open and never otherwise. A run of a
+ * pipeline nobody has measured yet gets no bar at all, which is the third row here.
+ *
+ * Every row is the way into that run in qits-ci — a full-document link, because that is another
+ * application on a host of its own. This story names a ci host, so the rows are links; on a
+ * platform that names none they are the same four facts as text.
+ *
  * The panel is opened here by the story, because a closed popover documents nothing. In an
  * application it opens on the bolt, closes on Escape or a click outside, and asks qits-ci only
  * while it is open — `provideQitsBuilds()` is what puts it in the bar at all.
  */
 export const WithPendingBuilds: Story = {
   name: 'With pending builds',
-  decorators: [applicationConfig({ providers: [provideQitsBuildList(DEMO_BUILDS)] })],
+  decorators: [
+    applicationConfig({
+      providers: [provideQitsBuildList(DEMO_BUILDS), scopeAt({ project: 'qits' })],
+    }),
+  ],
   play: openTheBolt,
 };
 
