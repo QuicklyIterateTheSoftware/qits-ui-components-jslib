@@ -96,6 +96,39 @@ describe('toNavTree', () => {
     expect(tree.entries[0].path).toBe('/ci');
   });
 
+  /**
+   * The label is always spelled out here, which is the whole point of a second field: on the default
+   * environment `origin` is the bare apex and this one still names the environment.
+   */
+  it('carries the project origin the edge serves, beside the environment origin', () => {
+    const tree = toNavTree({
+      origin: 'https://example.com',
+      projectOrigin: 'https://prod.example.com',
+      slots: { system: [{ app: 'a', label: 'A', origin: 'https://a.example.com', position: 1 }] },
+    });
+    expect(tree.environmentOrigin).toBe('https://example.com');
+    expect(tree.projectOrigin).toBe('https://prod.example.com');
+
+    // And beside the flat shape too, from an edge answering both halves mid-upgrade.
+    const legacy = toNavTree({
+      origin: 'https://example.com',
+      projectOrigin: 'https://prod.example.com',
+      links: [{ label: 'CI', href: '/ci/' }],
+    });
+    expect(legacy.projectOrigin).toBe('https://prod.example.com');
+  });
+
+  /** An edge that predates the field says nothing, and nothing is what the tree carries. */
+  it('leaves the project origin undefined where the edge serves none', () => {
+    const tree = toNavTree({
+      origin: 'https://dev.example.com',
+      slots: { system: [{ app: 'a', label: 'A', origin: 'https://a.example.com', position: 1 }] },
+    });
+    expect(tree.environmentOrigin).toBe('https://dev.example.com');
+    expect(tree.projectOrigin).toBeUndefined();
+    expect(toNavTree({ links: [{ label: 'CI', href: '/ci/' }] }).projectOrigin).toBeUndefined();
+  });
+
   /** One spelling to join to, whatever the platform sent — and nothing invented where it sent none. */
   it('normalises the path prefix at both ends', () => {
     const tree = toNavTree({
@@ -149,6 +182,7 @@ describe('toNavTree', () => {
     expect(toNavTree(undefined)).toEqual({
       entries: [],
       environmentOrigin: undefined,
+      projectOrigin: undefined,
       apiDocs: {},
       legacy: [],
     });

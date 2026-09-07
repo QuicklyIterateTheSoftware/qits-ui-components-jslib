@@ -128,6 +128,7 @@ edge answers with slots — one entry per application, filed under where it belo
 {
   "environment": "dev",
   "origin": "https://dev.example.com",
+  "projectOrigin": "https://dev.example.com",
   "slots": {
     "system": [{ "app": "qits-projects", "label": "Overview", "host": "projects", "path": "/projects", "origin": "https://projects.dev.example.com", "position": 1 }],
     "platform": [{ "app": "qits-platform-events", "label": "Events", "host": "events", "path": "/events", "origin": "https://events.dev.example.com", "position": 1 }],
@@ -141,10 +142,15 @@ Every entry carries both `host` and `path`, and the last one above is an applica
 does not serve on a host of its own yet: `host: null`, the environment origin, and `/ci` as the
 segment it answers on there. `HttpNavigationSource` normalises the payload into a `QitsNavTree`:
 every slot flattened into one list sorted by position then label, each entry carrying its slot and
-its path prefix, plus the environment origin. An edge
-that predates slots answers the flat `{"links":[…]}` shape instead, and the tree carries it as
-`legacy` — set **only** when no slots were served, because the two are exclusive: `legacy` means
-"this platform cannot tell me its shape", and the sidebar then draws the flat list it always drew.
+its path prefix, plus the environment origin. `projectOrigin` rides beside `origin` and is carried
+through untouched as `tree.projectOrigin`: the same origin with the environment label **always**
+spelled out, where `origin` on the default environment is the bare apex. An application that builds
+a per-project host prefixes its own name onto it; nothing here composes anything from it, and an
+edge that does not serve it leaves the field `undefined` rather than having a frontend work the
+label out from the apex. An edge that predates slots answers the flat `{"links":[…]}` shape instead,
+and the tree carries it as `legacy` — set **only** when no slots were served, because the two are
+exclusive: `legacy` means "this platform cannot tell me its shape", and the sidebar then draws the
+flat list it always drew.
 
 `provideQitsNavigationTree(payload)` and `provideQitsNavigationLinks([…])` answer the same contract
 from a literal — specs, stories, an `ng serve` with no platform in front of it. Nothing is fetched,

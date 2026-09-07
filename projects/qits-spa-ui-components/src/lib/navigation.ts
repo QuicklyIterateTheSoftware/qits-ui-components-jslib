@@ -102,6 +102,16 @@ export interface QitsNavigation {
   readonly environment?: string;
   /** The environment's own origin — where an application without a host of its own is served. */
   readonly origin?: string;
+  /**
+   * The environment's origin with its label always spelled out — `https://dev.example.com` on every
+   * environment, including the default one whose {@link origin} is the bare apex.
+   *
+   * Served beside `origin` rather than instead of it because the two answer different questions:
+   * `origin` is where a host-less application is reached, and this is the host an application
+   * *composes a name onto*. Only the edge knows which label an environment wears, and a frontend
+   * that worked it out from the apex got it wrong twice.
+   */
+  readonly projectOrigin?: string;
   readonly slots?: Readonly<Partial<Record<QitsNavSlot, readonly QitsNavEntryBody[]>>>;
   /** Per-application metadata, keyed by application name — see {@link QitsNavApplication}. */
   readonly applications?: Readonly<Record<string, QitsNavApplication | null>>;
@@ -122,6 +132,12 @@ export interface QitsNavTree {
   readonly entries: readonly QitsNavEntry[];
   /** Where the environment itself is served, if the platform said. */
   readonly environmentOrigin: string | undefined;
+  /**
+   * The same origin with the environment label always present, and `undefined` from an edge that
+   * does not serve it yet. Carried through untouched: this library composes nothing from it — an
+   * application that needs a per-project host prefixes its own name onto this one.
+   */
+  readonly projectOrigin: string | undefined;
   /**
    * Each application's api-docs path, by application name, normalised to a leading slash. Only
    * applications the platform said publish one appear — absence is "this application documents no
@@ -163,7 +179,13 @@ export const QITS_NAVIGATION = new InjectionToken<QitsNavigationSource>('QITS_NA
 export const QITS_NAVIGATION_URL = '/main-navigation';
 
 /** The stranded answer: nothing to show, and no legacy list to fall back on either. */
-const NOTHING: QitsNavTree = { entries: [], environmentOrigin: undefined, apiDocs: {}, legacy: [] };
+const NOTHING: QitsNavTree = {
+  entries: [],
+  environmentOrigin: undefined,
+  projectOrigin: undefined,
+  apiDocs: {},
+  legacy: [],
+};
 
 /** `/ci`, from `ci`, `/ci` or `/ci/` — a prefix to join to, with nothing to guess at either end. */
 function toPathPrefix(path: string | undefined): string {
@@ -206,6 +228,7 @@ export function toNavTree(body: QitsNavigation | null | undefined): QitsNavTree 
     return {
       entries: [],
       environmentOrigin: body?.origin,
+      projectOrigin: body?.projectOrigin,
       apiDocs: toApiDocs(body?.applications),
       legacy: body?.links ?? [],
     };
@@ -229,6 +252,7 @@ export function toNavTree(body: QitsNavigation | null | undefined): QitsNavTree 
   return {
     entries: entries.sort(inOrder),
     environmentOrigin: body?.origin,
+    projectOrigin: body?.projectOrigin,
     apiDocs: toApiDocs(body?.applications),
     legacy: undefined,
   };

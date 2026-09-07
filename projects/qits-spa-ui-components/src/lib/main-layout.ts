@@ -761,11 +761,12 @@ export class QitsMainLayout {
     // `own?.length`, not `own.length`: `withComponentInputBinding()` writes `undefined` into a route
     // component's inputs for every route parameter it cannot supply, and it has wiped this one
     // before. An input with a default is not a guarantee of a value.
-    if (own?.length) return { entries: [], environmentOrigin: undefined, legacy: own };
+    if (own?.length)
+      return { entries: [], environmentOrigin: undefined, projectOrigin: undefined, legacy: own };
     // No provider at all is not "waiting" — nothing is coming. Strand it rather than spin forever.
     return this.source
       ? this.source.tree()
-      : { entries: [], environmentOrigin: undefined, legacy: [] };
+      : { entries: [], environmentOrigin: undefined, projectOrigin: undefined, legacy: [] };
   });
 
   /** Nothing has answered yet: render nothing and say so on the `<nav>`. */
