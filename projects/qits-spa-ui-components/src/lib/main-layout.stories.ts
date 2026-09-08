@@ -264,13 +264,25 @@ export default meta;
 type Story = StoryObj<QitsMainLayout>;
 
 /**
- * The builds popover is closed until someone opens it — that is the point of it — so the stories
- * about what is *inside* it open it themselves. `canvasElement` is the story's own root, which is
- * what keeps this from finding the bolt of a neighbouring story in the docs page.
+ * The builds popover is closed until someone opens it — that is the point of it — so the one story
+ * about what is *inside* it opens it itself. Every other builds story is about the shut bolt, which
+ * is what a reader actually spends their day looking at, and opening the panel there would hide the
+ * state the story is documenting behind the answer to it. `canvasElement` is the story's own root,
+ * which is what keeps this from finding the bolt of a neighbouring story in the docs page.
  */
 async function openTheBolt({ canvasElement }: { canvasElement: HTMLElement }): Promise<void> {
   canvasElement.querySelector<HTMLButtonElement>('.qits-layout-builds-toggle')?.click();
 }
+
+/** A queue nobody is working through yet, long enough for the badge to stop counting exactly. */
+const QUEUED_BUILDS: readonly QitsBuild[] = Array.from({ length: 12 }, (_, index) => ({
+  id: `queued-${index}`,
+  repoName: 'qits-ci-service',
+  branch: `ticket/waiting-${index}`,
+  status: 'QUEUED',
+  configPath: '.config/qits/ci-post-receive.yml',
+  createdAt: ago(30 + index),
+}));
 
 /** No project in scope: the groups that are about one have nothing to say, so only SYSTEM shows. */
 export const Default: Story = {};
@@ -437,8 +449,81 @@ export const ProjectsUnavailable: Story = {
 };
 
 /**
- * The pending-builds bolt, beside the picker: what qits-ci has in hand, one click away from every
- * page of every application. A run under way carries the info tone and a rail down its left; one
+ * The pending-builds bolt, beside the picker, **shut** — which is how a reader meets it: something
+ * is building, so the bolt is amber, and the red dot at its corner counts what has not started yet.
+ * Neither reaches a screen reader, so the button's own `aria-label` says it in words: *Pending
+ * builds: 1 running, 2 queued*.
+ *
+ * The count is kept current behind a shut panel, off the platform's own event stream, with a slow
+ * interval where that stream cannot be held — `provideQitsBuilds()` is what puts all of it in the
+ * bar at all.
+ */
+export const WithPendingBuilds: Story = {
+  name: 'With pending builds',
+  decorators: [
+    applicationConfig({
+      providers: [provideQitsBuildList(DEMO_BUILDS), scopeAt({ project: 'qits' })],
+    }),
+  ],
+};
+
+/**
+ * The queue is empty and the platform is idle. Grey-filled is an **answer** — we asked, and nothing
+ * is building — and no badge at all, rather than a red dot reading zero on every page of a quiet
+ * afternoon.
+ */
+export const NoPendingBuilds: Story = {
+  name: 'No pending builds',
+  decorators: [applicationConfig({ providers: [provideQitsBuildList([])] })],
+};
+
+/**
+ * A queue long enough that the number stops being one: past nine the badge reads `9+`, because a
+ * wider dot would move the bolt and everything beside it in the bar, and "a lot" is all a badge
+ * that size can honestly carry. The exact figure is in the label and in the panel.
+ */
+export const QueuedBuilds: Story = {
+  name: 'A queue that outgrew its badge',
+  decorators: [
+    applicationConfig({
+      providers: [provideQitsBuildList(QUEUED_BUILDS), scopeAt({ project: 'qits' })],
+    }),
+  ],
+};
+
+/**
+ * `/ci` could not be reached — the ordinary case on a host the platform does not route it on. The
+ * bolt is **hollowed out**: a grey-filled one would be a confident "nothing is building", which is
+ * the one thing this chrome is in no position to say, and the label reads *Pending builds:
+ * unavailable*. Nothing else on the page changes, which is the whole failure mode of a header
+ * affordance that reads another application; opening it says the same thing in one quiet line.
+ */
+export const BuildsUnavailable: Story = {
+  name: 'Builds unavailable',
+  decorators: [applicationConfig({ providers: [provideQitsBuildList([], { failed: true })] })],
+};
+
+/**
+ * Nothing has answered yet — the first paint of every chrome. Deliberately quiet: the resting grey
+ * is right, because there is nothing to report and an alarm would be a claim. It is *not* reported
+ * as idle to a screen reader, though; the label reads *Pending builds: checking*.
+ */
+export const BuildsLoading: Story = {
+  name: 'Builds loading',
+  decorators: [
+    applicationConfig({
+      providers: [
+        {
+          provide: QITS_BUILDS,
+          useValue: { runs: signal(undefined), failed: signal(false), watch: () => undefined },
+        },
+      ],
+    }),
+  ],
+};
+
+/**
+ * The popover behind the bolt. A run under way carries the info tone and a rail down its left; one
  * waiting for a worker is neutral, so the two are told apart by more than a colour.
  *
  * Under the facts, where qits-ci predicted the run's steps, its **expected shape**: the track is
@@ -452,48 +537,14 @@ export const ProjectsUnavailable: Story = {
  * platform that names none they are the same four facts as text.
  *
  * The panel is opened here by the story, because a closed popover documents nothing. In an
- * application it opens on the bolt, closes on Escape or a click outside, and asks qits-ci only
- * while it is open — `provideQitsBuilds()` is what puts it in the bar at all.
+ * application it opens on the bolt, closes on Escape or a click outside, and asks qits-ci at the
+ * panel's own five-second rate only while it is open.
  */
-export const WithPendingBuilds: Story = {
-  name: 'With pending builds',
+export const BuildsPanel: Story = {
+  name: 'The builds panel',
   decorators: [
     applicationConfig({
       providers: [provideQitsBuildList(DEMO_BUILDS), scopeAt({ project: 'qits' })],
-    }),
-  ],
-  play: openTheBolt,
-};
-
-/** The queue is empty and the platform is idle — said in words, not as an empty box. */
-export const NoPendingBuilds: Story = {
-  name: 'No pending builds',
-  decorators: [applicationConfig({ providers: [provideQitsBuildList([])] })],
-  play: openTheBolt,
-};
-
-/**
- * `/ci` could not be reached — the ordinary case on a host the platform does not route it on. One
- * quiet line inside the panel, and nothing around it changes: that is the whole failure mode of a
- * header affordance that reads another application.
- */
-export const BuildsUnavailable: Story = {
-  name: 'Builds unavailable',
-  decorators: [applicationConfig({ providers: [provideQitsBuildList([], { failed: true })] })],
-  play: openTheBolt,
-};
-
-/** Nothing has answered since the panel opened — the first paint of every open of the popover. */
-export const BuildsLoading: Story = {
-  name: 'Builds loading',
-  decorators: [
-    applicationConfig({
-      providers: [
-        {
-          provide: QITS_BUILDS,
-          useValue: { runs: signal(undefined), failed: signal(false), watch: () => undefined },
-        },
-      ],
     }),
   ],
   play: openTheBolt,

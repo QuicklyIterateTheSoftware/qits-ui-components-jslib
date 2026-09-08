@@ -201,13 +201,22 @@ interface QitsNavRow {
  * not a filter inside one of them. An app that provides no `QITS_PROJECTS` still gets `brand()`
  * there, which is what keeps this a slot rather than a requirement.
  *
- * **Beside it, the pending-builds bolt**, where an app provides `QITS_BUILDS` — a popover listing
- * what qits-ci is building and what is waiting for a worker, asked for when it opens and refreshed
- * while it stays open. It is a glance, not a page: four facts a row, and the row itself is the way
- * into the run in qits-ci. Under the facts, where qits-ci predicted the run's steps, the expected
- * shape of it as a segmented bar filling against a local clock, with what it has actually taken so
- * far beside it. Nothing is requested while it is shut — and nothing ticks either — and a `/ci` that
- * cannot be reached is one quiet line inside the panel rather than anything the layout notices.
+ * **Beside it, the pending-builds bolt**, where an app provides `QITS_BUILDS` — and the bolt is an
+ * affordance in its own right before it is the handle of a popover. It goes **amber while anything
+ * is building**, with a small red count of what has not started yet at its corner; a grey-filled
+ * bolt is the answer "we asked, and nothing is building"; and a read that failed draws it
+ * **hollow**, because a confident grey would be a claim this chrome is in no position to make. The
+ * `aria-label` says the same thing in words — the fill and the badge reach nobody who cannot see
+ * them.
+ *
+ * <p>Behind it, the popover: what qits-ci is building and what is waiting for a worker, refreshed
+ * every few seconds while it stays open. It is a glance, not a page — four facts a row, and the row
+ * itself is the way into the run in qits-ci. Under the facts, where qits-ci predicted the run's
+ * steps, the expected shape of it as a segmented bar filling against a local clock, with what it has
+ * actually taken so far beside it. Nothing ticks while it is shut and nothing is polled at the
+ * panel's rate, but the count itself stays current — see {@link QitsBuildsSource} — and a `/ci`
+ * that cannot be reached is a hollow bolt and one quiet line inside the panel, rather than anything
+ * the layout notices.
  *
  * ## How a link gets into the sidebar — and how to add or move one
  *
@@ -328,15 +337,30 @@ interface QitsNavRow {
               type="button"
               class="qits-layout-builds-toggle"
               [class.qits-layout-builds-toggle-open]="buildsOpen()"
-              aria-label="Pending builds"
+              [attr.aria-label]="buildsLabel()"
               aria-controls="qits-layout-builds-panel"
               [attr.aria-expanded]="buildsOpen()"
               (click)="toggleBuilds()"
             >
-              <svg class="qits-layout-bolt" viewBox="0 0 12 16" aria-hidden="true">
+              <svg
+                class="qits-layout-bolt"
+                [class.qits-layout-bolt-busy]="buildsBusy()"
+                [class.qits-layout-bolt-unknown]="buildsFailed()"
+                viewBox="0 0 12 16"
+                aria-hidden="true"
+              >
                 <path d="M7.5 0 L1 9.5 H5 L4.5 16 L11 6.5 H7 Z" />
               </svg>
             </button>
+
+            <!-- Nothing queued draws nothing: a dot reading "0" is a fact nobody needs stated, and
+                 it would make the resting bar of every page carry an alarm colour. It is
+                 aria-hidden and click-through because the button beside it already says the whole
+                 state in words, and a counter that ate the corner of its own control would be a
+                 worse affordance than no counter. -->
+            @if (queued() > 0) {
+              <span class="qits-layout-builds-count" aria-hidden="true">{{ queuedLabel() }}</span>
+            }
 
             @if (buildsOpen()) {
               <div
@@ -349,7 +373,7 @@ interface QitsNavRow {
                   <p class="qits-layout-builds-note qits-layout-builds-error">
                     Builds unavailable.
                   </p>
-                } @else if (buildsPending()) {
+                } @else if (buildsChecking()) {
                   <p class="qits-layout-builds-note">Checking…</p>
                 } @else if (buildRows().length === 0) {
                   <p class="qits-layout-builds-note">Nothing building.</p>
@@ -580,10 +604,61 @@ interface QitsNavRow {
       background: #e5e7eb;
       color: #111827;
     }
+    /* Grey-filled is an answer: we asked, and nothing is building. The fill is the button's own
+       colour, so at rest it is the quiet grey of the chrome and it darkens under the pointer with
+       everything else in the bar. overflow: visible is for the hollow state below — the path
+       touches every edge of its own viewBox, so a stroke on it would be clipped in half. */
     .qits-layout-bolt {
       width: 11px;
       height: 15px;
       fill: currentColor;
+      overflow: visible;
+    }
+    /* Something is building. The bolt takes a colour of its OWN rather than the button taking a
+       fourth one: hovering a busy bolt would otherwise repaint it in the hover colour and quietly
+       un-say the thing it exists to say. Amber, beside the panel's own #b91c1c for an error and
+       #1d4ed8 for a run under way — a state, not an alarm. */
+    .qits-layout-bolt-busy {
+      fill: #d97706;
+    }
+    /* The read failed, so this bolt knows nothing — and a grey-filled bolt would be a confident
+       "nothing is building", which is the one thing it must not say. Hollowed out and quieter: the
+       shape is still a bolt, and it is visibly not an answer. The aria-label says it in words,
+       since neither a fill nor an outline reaches a screen reader. */
+    .qits-layout-bolt-unknown {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.25;
+      stroke-linejoin: round;
+      opacity: 0.55;
+    }
+
+    /* The queue, counted on the bolt itself. Bottom-left because the panel hangs off the bottom
+       edge and the picker is to the left, so this corner is the one nothing else is using — and
+       the wrapper is already position: relative, so the dot needs no structure of its own.
+       Click-through: the whole box is the toggle, and a badge that swallowed a corner of it would
+       be a dead spot in the middle of a control. */
+    .qits-layout-builds-count {
+      position: absolute;
+      left: -5px;
+      bottom: -4px;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      min-width: 15px;
+      height: 15px;
+      padding: 0 3px;
+      background: #b91c1c;
+      color: #ffffff;
+      border: 1px solid #ffffff;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      pointer-events: none;
     }
 
     /* A panel over the page, not a column in the bar: the bar is 240px wide from the breakpoint up,
@@ -1036,14 +1111,15 @@ export class QitsMainLayout {
   protected readonly projectSlug = computed(() => this.scope().project);
 
   /**
-   * Whether the pending-builds panel is open — and, with it, whether anything is being asked for.
-   * The source polls only while somebody is looking, so this signal is the whole cost model of the
-   * affordance: closed, the chrome makes no request at all.
+   * Whether the pending-builds panel is open — and, with it, whether the source is polling at the
+   * open panel's rate and the local clock is ticking. Not whether anything is being asked for at
+   * all: the count behind the bolt is kept current either way, which is what lets the bolt mean
+   * something on a page nobody has clicked.
    */
   protected readonly buildsOpen = signal(false);
 
-  /** Nothing has answered since the panel opened. */
-  protected readonly buildsPending = computed(
+  /** Nothing has answered yet. The first paint of a chrome, and every reload of one. */
+  protected readonly buildsChecking = computed(
     () => this.builds?.runs() === undefined && !this.buildsFailed(),
   );
 
@@ -1051,12 +1127,66 @@ export class QitsMainLayout {
   protected readonly buildsFailed = computed(() => this.builds?.failed() ?? false);
 
   /**
+   * Something is building. The listing is the active runs and nothing else, so a non-empty one *is*
+   * the platform being busy — there is no status to consult and no threshold to pick.
+   */
+  protected readonly buildsBusy = computed(() => (this.builds?.runs() ?? []).length > 0);
+
+  /**
+   * How many runs are waiting for a worker: **everything that has not started**.
+   *
+   * <p>Counted as "not `RUNNING`", never as "`QUEUED`". `QitsBuild.status` is carried through as
+   * qits-ci said it and is deliberately never narrowed, so a state this library has not heard of —
+   * a `PROVISIONING`, whatever qits-ci grows next — is still a build nobody is building yet, and
+   * counting by the one word we know would under-report the queue by exactly the runs the platform
+   * has most recently learned to have.
+   */
+  protected readonly queued = computed(
+    () => (this.builds?.runs() ?? []).filter((run) => run.status !== QITS_BUILD_RUNNING).length,
+  );
+
+  /**
+   * The number on the badge, capped. A queue of forty is a wide badge, and a wide badge moves the
+   * bolt and everything beside it in the bar — so past nine the count stops being a number and
+   * becomes "a lot", which is all a dot that size can honestly carry anyway. The exact figure is
+   * one click away, in the panel and in the label.
+   */
+  protected readonly queuedLabel = computed(() => {
+    const queued = this.queued();
+    return queued > 9 ? '9+' : `${queued}`;
+  });
+
+  /**
+   * What the bolt says to a reader who cannot see it, and the only channel that reaches them:
+   * neither the fill nor the badge is announced, and a button labelled "Pending builds" would have
+   * said the same four words in every one of the four states below.
+   *
+   * <p>So it states the state, in the same three-state honesty the panel has — checking, an answer,
+   * or a read that failed — with the answer spelled as the two counts a reader would otherwise
+   * have opened the panel for. A zero side is left out rather than said as "0 queued": the point is
+   * what is happening, not a table.
+   */
+  protected readonly buildsLabel = computed(() => {
+    if (this.buildsFailed()) return 'Pending builds: unavailable';
+    if (this.buildsChecking()) return 'Pending builds: checking';
+    const runs = this.builds?.runs() ?? [];
+    if (runs.length === 0) return 'Pending builds: none';
+    const queued = this.queued();
+    const running = runs.length - queued;
+    const parts: string[] = [];
+    if (running > 0) parts.push(`${running} running`);
+    if (queued > 0) parts.push(`${queued} queued`);
+    return `Pending builds: ${parts.join(', ')}`;
+  });
+
+  /**
    * The panel's own clock, and the second half of the cost model the panel is.
    *
    * A run's bar and the number beside it grow while nobody touches anything, and that growth is a
    * subtraction rather than news: re-reading qits-ci to learn what `now - startedAt` already knows
    * would turn a panel somebody left open into traffic. So the clock ticks locally, at one second
-   * because the numbers are in seconds — and only while the panel is open, exactly as the poll is.
+   * because the numbers are in seconds — and only while the panel is open, exactly as the panel's
+   * own five-second poll is. Nothing behind a closed bolt ticks.
    */
   private readonly now = signal(Date.now());
   private ticker: ReturnType<typeof setInterval> | undefined = undefined;
@@ -1135,9 +1265,10 @@ export class QitsMainLayout {
   }
 
   /**
-   * One place where the panel's state, the source's polling and the local clock are said in the
-   * same breath. All three start together and all three stop together, which is the only way the
-   * "nothing happens while it is closed" promise stays true of every one of them.
+   * One place where the panel's state, the source's cadence and the local clock are said in the
+   * same breath. All three start together and all three wind down together — the clock stops, and
+   * the source drops back from the open panel's five seconds to keeping the count current quietly.
+   * It does not stop reading, and it does not forget: the bolt is still on screen saying something.
    */
   private setBuildsOpen(open: boolean): void {
     this.buildsOpen.set(open);

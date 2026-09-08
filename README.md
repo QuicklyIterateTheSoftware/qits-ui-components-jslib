@@ -13,7 +13,8 @@ each SPA knows only itself. So the chrome makes three reads, and everything else
 still takes what it renders as an input.
 
 A fourth read hangs off the same rule and is opt-in: the pending-builds bolt asks qits-ci what it is
-building, and only while a reader is looking at the answer.
+building, and keeps that count current off the platform's event stream whether or not anybody has
+opened the panel over it.
 
 | Component        | Selector             | What it is                                                                                                                                                                                                                      |
 | ---------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -340,13 +341,60 @@ bootstrapApplication(App, {
 
 `GET /ci/api/runs/active`, a **same-origin path** like the chrome's other reads and for the same
 reason: the edge routes `/ci` on every vhost, so the browser's own session reaches qits-ci with no
-machine token, no CORS pre-flight and no origin compiled in here.
+machine token, no CORS pre-flight and no origin compiled in here. **That listing is the single
+source of truth** and the only thing ever drawn; everything below is about when to read it again.
 
-The panel is the whole cost model. Nothing is asked while it is closed — and nothing ticks either;
-opening it reads once and again every five seconds; closing it stops the timer, cancels a read in
-flight and **forgets the answer**, because a queue from an hour ago painted as now is worse than a
-pending state that resolves in a moment. It closes on Escape — handing the focus back to the bolt —
-and on a click outside itself.
+**The count stays current while the panel is shut**, because the bolt says something on a page
+nobody has clicked. It is not a closed-state poll: the listing is read once as the chrome is built,
+and after that whenever the platform says something happened —
+
+    GET /events/api/stream?names=BuildStatusChanged,BuildSuccessful,BuildFailed
+
+an `EventSource` on a bare same-origin path, for `/ci`'s reason: the edge routes `/events` on every
+vhost too. `BuildStatusChanged` fires on every transition of a run's status — queued, started, and
+each terminal state — so both edges of the active listing are announced. A frame carries **nothing
+this library reads**: it means only "go and look", and a burst of them is coalesced into one read
+(250ms). Every connect re-reads, **reconnects included** — the stream is live-only, with no replay,
+no offset and no catch-up, so a stream that dropped and came back has missed everything in between
+and the listing is the only road back.
+
+**Where the stream cannot be held, degrade rather than disappear.** An edge that will not pass it, a
+browser that keeps failing, a session without the roles (`qits:admin`/`qits:system`, the same wall
+`/ci/api/runs/active` already stands behind), or no `EventSource` at all on a server render: after
+two consecutive failures the stream is given up for good and a slow interval takes over
+(`QITS_BUILDS_FALLBACK_INTERVAL_MS`, 30s). Same listing, same drawing, later answers.
+`provideQitsBuilds({ eventSource: null })` opts out of the stream up front and lands on the same
+path; `streamUrl`, `fallbackIntervalMs` and a fake `eventSource` are all overridable.
+
+**The open panel keeps its own cadence on top of that**: opening reads at once and again every five
+seconds, because a reader watching a run move wants it moving. Closing drops back to keeping the
+count current quietly — it does **not** stop, and it does not forget, since forgetting would blank
+the bolt at the moment the reader stopped looking at the panel and started relying on the bolt.
+Nothing ticks behind a shut panel. It closes on Escape — handing the focus back to the bolt — and on
+a click outside itself.
+
+**The bolt itself says four things, in colour, in a number and in words.**
+
+| state              | the bolt                                | the badge   | `aria-label`                        |
+| ------------------ | --------------------------------------- | ----------- | ----------------------------------- |
+| something building | amber `#d97706`                         | the queue   | `Pending builds: 3 running, 2 queued` |
+| nothing building   | the button's grey `#6b7280`             | none        | `Pending builds: none`              |
+| the read failed    | hollow — `fill: none`, stroked, faded   | none        | `Pending builds: unavailable`       |
+| nothing yet        | the resting grey, quietly               | none        | `Pending builds: checking`          |
+
+*Pending* is the active listing being non-empty — there is no threshold and no status to consult.
+The amber is the **bolt's own** fill rather than a fourth colour on the button, because hovering a
+busy bolt would otherwise repaint it and quietly un-say the thing it exists to say. A failed read is
+drawn as visibly *unanswered* rather than grey, so that grey keeps meaning "we asked, and nothing is
+building"; and "checking" is allowed to look like rest but is never reported as idle, since the
+label is the only channel a screen reader has — neither the fill nor the badge is announced.
+
+**The badge is the queue**, a small red dot at the bolt's bottom-left (the wrapper is already
+`position: relative`, so it needs no structure of its own; it is `aria-hidden` and click-through).
+It counts the runs that have **not started** — `status !== 'RUNNING'`, never `status === 'QUEUED'`,
+because the status is carried through as qits-ci said it and a word this library has not heard of is
+still a build nobody is building yet. Zero draws **nothing at all**, rather than a dot reading `0`;
+past nine it reads `9+`, because a wider dot would move the bolt and everything beside it in the bar.
 
 Each row is four facts: the repository, the status, the branch, and the pipeline file's **name**
 (`ci-event-release-request.yml`), since every run on this platform shares the directories in front of
@@ -381,10 +429,10 @@ one another and a wrong shape is worse than no shape.
 
 An empty queue says "Nothing building.", a read still in flight "Checking…", and a `/ci` that could
 not be reached one quiet line — "Builds unavailable." — inside the panel. That last one is the
-ordinary case on a host where the edge routes no `/ci` at all, and it is why the failure is a
-sentence in a popover rather than anything the layout around it notices.
-`provideQitsBuildList([…])` answers the same contract from a literal, with nothing fetched and
-nothing polled.
+ordinary case on a host where the edge routes no `/ci` at all, and it is why the failure is a hollow
+bolt and a sentence in a popover rather than anything the layout around it notices.
+`provideQitsBuildList([…])` answers the same contract from a literal, with nothing fetched, nothing
+polled and no stream opened.
 
 ## Install
 

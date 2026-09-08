@@ -1148,6 +1148,44 @@ describe('QitsMainLayout', () => {
       fixture.detectChanges();
     }
 
+    /** The glyph itself, which is what carries the colour — the button around it does not. */
+    function glyph(fixture: ComponentFixture<unknown>): SVGElement {
+      return fixture.nativeElement.querySelector('.qits-layout-bolt') as SVGElement;
+    }
+
+    /** The queue count at the bolt's corner, or `null` where there is nothing to count. */
+    function badge(fixture: ComponentFixture<unknown>): HTMLElement | null {
+      return fixture.nativeElement.querySelector('.qits-layout-builds-count') as HTMLElement | null;
+    }
+
+    /** A run, named only by what a test is about: its status. */
+    function run(id: string, status: string): QitsBuild {
+      return {
+        id,
+        repoName: 'qits-ci-service',
+        branch: 'main',
+        status,
+        configPath: '.config/qits/ci-post-receive.yml',
+      };
+    }
+
+    function label(fixture: ComponentFixture<unknown>): string | null {
+      return bolt(fixture).getAttribute('aria-label');
+    }
+
+    /**
+     * A second render inside one case. A `TestBed` may be configured once, and several of the cases
+     * below are about telling two renders apart — so the module is torn down between them, which
+     * leaves the elements already read from the first one perfectly readable.
+     */
+    function again(
+      runs: readonly QitsBuild[] | undefined,
+      options?: { readonly failed?: boolean },
+    ): ComponentFixture<QitsMainLayout> {
+      TestBed.resetTestingModule();
+      return renderBuilds(runs, options);
+    }
+
     it('is absent from an application that provides no builds source', () => {
       const fixture = render();
       expect(fixture.nativeElement.querySelector('.qits-layout-builds')).toBeNull();
@@ -1155,12 +1193,94 @@ describe('QitsMainLayout', () => {
 
     it('starts closed, says so, and names itself for a reader who cannot see a bolt', () => {
       const fixture = renderBuilds(RUNS);
-      expect(bolt(fixture).getAttribute('aria-label')).toBe('Pending builds');
+      expect(bolt(fixture).getAttribute('aria-label')).toBe('Pending builds: 1 running, 1 queued');
       expect(bolt(fixture).getAttribute('aria-expanded')).toBe('false');
       expect(bolt(fixture).getAttribute('aria-controls')).toBe('qits-layout-builds-panel');
       expect(panel(fixture)).toBeNull();
-      // Closed is not merely empty: nothing has been asked for yet either.
+      // Closed is not merely empty: the panel's own cadence has not been asked for either.
       expect(watched).toEqual([]);
+    });
+
+    /**
+     * The bolt is an affordance before it is a handle: shut, it is the only thing on the page that
+     * says whether the platform is doing anything, so it has to say it in colour, in a number and
+     * in words — and it has to say "I do not know" as distinctly as it says "nothing".
+     */
+    describe('what the shut bolt says', () => {
+      it('goes yellow while anything is building, and stays grey while nothing is', () => {
+        expect(glyph(again([run('a', 'RUNNING')])).classList).toContain('qits-layout-bolt-busy');
+        expect(glyph(again([run('a', 'QUEUED')])).classList).toContain('qits-layout-bolt-busy');
+        expect(glyph(again([])).classList).not.toContain('qits-layout-bolt-busy');
+      });
+
+      /** A dot reading zero is a fact nobody needs stated, in the loudest colour in the chrome. */
+      it('draws no badge at all when nothing is waiting for a worker', () => {
+        expect(badge(again([run('a', 'RUNNING')]))).toBeNull();
+        expect(badge(again([]))).toBeNull();
+      });
+
+      /**
+       * The queue is everything that has not started, counted as "not RUNNING" — the status is
+       * carried through as qits-ci said it and never narrowed, so a word this library has not heard
+       * of is still a build nobody is building yet.
+       */
+      it('counts every run that has not started, whatever qits-ci calls it', () => {
+        const fixture = renderBuilds([
+          run('a', 'RUNNING'),
+          run('b', 'QUEUED'),
+          run('c', 'PROVISIONING'),
+        ]);
+        expect(badge(fixture)?.textContent?.trim()).toBe('2');
+        expect(label(fixture)).toBe('Pending builds: 1 running, 2 queued');
+      });
+
+      /** A wide badge would move the bolt and everything beside it in the bar. */
+      it('caps a big queue rather than letting it resize the bolt', () => {
+        const many = Array.from({ length: 12 }, (_, index) => run(`q${index}`, 'QUEUED'));
+        expect(badge(again(many))?.textContent?.trim()).toBe('9+');
+        expect(badge(again(many.slice(0, 9)))?.textContent?.trim()).toBe('9');
+        // The exact figure is one click away; the label is where a reader who cannot see it gets it.
+        expect(label(again(many))).toBe('Pending builds: 12 queued');
+      });
+
+      /**
+       * A read that failed must not paint a confident grey bolt any more than a yellow one: a
+       * grey-filled bolt means "we asked, and nothing is building", which is exactly what this
+       * chrome is in no position to say.
+       */
+      it('hollows the bolt out when the read failed, and says so in words', () => {
+        const fixture = renderBuilds([], { failed: true });
+        expect(glyph(fixture).classList).toContain('qits-layout-bolt-unknown');
+        expect(glyph(fixture).classList).not.toContain('qits-layout-bolt-busy');
+        expect(badge(fixture)).toBeNull();
+        expect(label(fixture)).toBe('Pending builds: unavailable');
+      });
+
+      /**
+       * Neither the fill nor the badge is announced, so the label is the only channel there is —
+       * and "checking" is not "idle", however alike the two look at rest.
+       */
+      it('states the state to a screen reader, in each of the four the bolt has', () => {
+        expect(label(again(undefined))).toBe('Pending builds: checking');
+        expect(label(again([]))).toBe('Pending builds: none');
+        expect(label(again([run('a', 'RUNNING')]))).toBe('Pending builds: 1 running');
+        expect(label(again([run('a', 'QUEUED')]))).toBe('Pending builds: 1 queued');
+        expect(label(again([run('a', 'RUNNING'), run('b', 'RUNNING')]))).toBe(
+          'Pending builds: 2 running',
+        );
+        // A zero side is left out rather than said as "0 queued": what is happening, not a table.
+        expect(label(again([run('a', 'RUNNING'), run('b', 'QUEUED')]))).toBe(
+          'Pending builds: 1 running, 1 queued',
+        );
+      });
+
+      /** The first paint of every chrome, and the one state that is allowed to look like rest. */
+      it('is quiet while nothing has answered yet', () => {
+        const fixture = renderBuilds(undefined);
+        expect(glyph(fixture).classList).not.toContain('qits-layout-bolt-busy');
+        expect(glyph(fixture).classList).not.toContain('qits-layout-bolt-unknown');
+        expect(badge(fixture)).toBeNull();
+      });
     });
 
     it('toggles the panel both ways, and starts and stops the asking with it', () => {
