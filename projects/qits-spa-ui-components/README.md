@@ -65,6 +65,23 @@ filling against a local one-second clock with the time actually taken beside it.
 bolt; an unreachable `/ci` is one quiet line inside the panel. `provideQitsBuildList([…])` is the
 literal form.
 
+`QitsDiffViewer` and `QitsChangeTree` are the two halves of a change view. The tree takes the
+changed files (`{ path, previousPath, changeType }`) and reports the one that was picked; the viewer
+takes git's patch text for that file and colours it by line. **The viewer never fetches** — a commit
+page and a release request's Changes tab read different routes for the same rows, so each caller
+keeps its own read. An empty patch is an answer, not a failure: a binary file, a pure rename, or a
+patch the service declined to send for its size.
+
+```html
+<qits-change-tree [entries]="changes()" [(selected)]="path" />
+<qits-diff-viewer [path]="path() ?? ''" [patch]="patch()" />
+```
+
+Single-child directory chains fold into one row, so
+`components/qits-projects/qits-projects-service/pom.xml` is two rows rather than four — which is
+what makes a wrapper release request legible. A directory click folds a row shut and never moves
+the selection.
+
 An app can hang its own menu under its own entry with `<ng-template qitsNavSubmenu>` — declared in
 the app shell beside the `<router-outlet />`, never inside a page, or it is rebuilt on every
 navigation and loses its state.

@@ -24,6 +24,34 @@ opened the panel over it.
 | `QitsPicker`     | `<qits-picker>`      | Pick one of a list. Required `options` (`{ value: T, label: string }[]`), two-way `value` of `T \| undefined`; `compareWith`, `placeholder`, `disabled`.                                                                         |
 | `QitsMainLayout` | `<qits-main-layout>` | The application skeleton: the project picker, the pending-builds bolt beside it, the nested sidebar, and the `<router-outlet />` the app's child routes render into. `brand` is the top-left fallback; `links` an override in the flat shape. |
 | `QitsNavSubmenu` | `[qitsNavSubmenu]`   | Marks an `<ng-template>` as the sub-menu under the current navigation row. The layout gives it a box; the app styles what goes in it.                                                                                            |
+| `QitsDiffViewer` | `<qits-diff-viewer>` | A file's unified diff, coloured by line. `patch` is git's own text and `path` the file it is of; it renders, it never fetches.                                                                                                   |
+| `QitsChangeTree` | `<qits-change-tree>` | The files a change set touches, as a tree. `entries` (`{ path, previousPath, changeType }[]`), two-way `selected`, `label`. Single-child directory chains fold into one row.                                                     |
+
+## A diff is rendered, never fetched
+
+`QitsDiffViewer` takes the patch text as an input. It is a port of qits-githost-frontend's own
+viewer, which injected the API client and read `…/commits/{sha}/diff` for itself — and that is
+exactly the one thing the extraction had to invert. Two callers want these rows now: a commit page,
+and a release request's Changes tab whose patch comes from `…/release-requests/{id}/changes/diff`
+and is cached per fold. A self-fetching child could serve neither without knowing about both, so
+each caller keeps its own read and hands the text down.
+
+```html
+<qits-diff-viewer [path]="path()" [patch]="patch()" />
+```
+
+An **empty patch is an answer, not a failure**, and has three causes: git emits none for a binary
+change, none for a pure rename, and the service declines to send one too large to be worth
+rendering. All three land on the same sentence rather than a blank pane.
+
+`QitsChangeTree` beside it draws the change set. **Single-child directory chains fold into one
+row**: `components/qits-projects/qits-projects-service/pom.xml` is two rows, not four, which is
+what makes a wrapper release request — where every path has that shape — readable at a glance. The
+fold lives in `change-tree-model.ts` as pure functions over the entries, so it is tested as
+arithmetic rather than through a DOM. A directory click folds a row shut and **never** moves the
+selection: that is navigation, not a choice of file. The list stays flat with `aria-level`, because
+a recursive component would nest one host element per level and make `aria-level` a lie about the
+DOM.
 
 `busy` is separate from `disabled` on purpose: both stop a press, but only `busy` sets
 `aria-busy`, so a host can say "working…" without also claiming the action is unavailable. Tones

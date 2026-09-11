@@ -77,3 +77,21 @@ export {
 } from './lib/scope';
 export type { QitsCategory, QitsRouting, QitsScope, QitsScopeSource } from './lib/scope';
 export { QitsAppLinks, QITS_BROWSER_ORIGIN } from './lib/app-links';
+export { QitsDiffViewer } from './lib/diff-viewer';
+export { QitsChangeTree } from './lib/change-tree';
+export {
+  buildChangeTree,
+  flattenChanges,
+  qitsChangeLetter,
+  qitsChangeTitle,
+  qitsChangeTone,
+  QITS_EMPTY_CHANGE_NODE,
+} from './lib/change-tree-model';
+export type {
+  QitsChangeEntry,
+  QitsChangeNode,
+  QitsChangeNodeKind,
+  QitsChangeRow,
+  QitsChangeTone,
+  QitsChangeType,
+} from './lib/change-tree-model';
