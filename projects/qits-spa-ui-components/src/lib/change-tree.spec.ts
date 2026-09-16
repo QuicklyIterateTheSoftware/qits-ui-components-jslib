@@ -98,6 +98,96 @@ describe('QitsChangeTree', () => {
     expect(seen).toEqual([]);
   });
 
+  describe('a submodule row — expandable and selectable at once', () => {
+    const SUBMODULE: readonly QitsChangeEntry[] = [
+      { path: 'components/qits-ci/qits-ci-service', changeType: 'MODIFIED' },
+      { path: 'components/qits-ci/qits-ci-service/src/Main.java', changeType: 'ADDED' },
+    ];
+
+    function toggleButton(fixture: ComponentFixture<QitsChangeTree>): HTMLButtonElement {
+      return entries(fixture).find((button) => button.dataset['kind'] === 'toggle')!;
+    }
+
+    function labelButton(fixture: ComponentFixture<QitsChangeTree>): HTMLButtonElement {
+      return entries(fixture).find(
+        (button) =>
+          button.dataset['kind'] === 'dir' &&
+          button.dataset['path'] === 'components/qits-ci/qits-ci-service',
+      )!;
+    }
+
+    it('draws the directory’s own change mark, the way a file row does', () => {
+      const fixture = render(SUBMODULE);
+      const marks = [...(fixture.nativeElement as HTMLElement).querySelectorAll('[data-change]')];
+      expect(marks.map((mark) => mark.textContent)).toEqual(['M', 'A']);
+      expect(labelButton(fixture).querySelector('[data-change]')?.textContent).toBe('M');
+      expect(labelButton(fixture).getAttribute('title')).toBe(
+        'components/qits-ci/qits-ci-service — modified',
+      );
+    });
+
+    it('selects on the label and does not toggle', () => {
+      const fixture = render(SUBMODULE);
+      const seen: (string | null)[] = [];
+      fixture.componentInstance.selected.subscribe((path) => seen.push(path));
+
+      labelButton(fixture).click();
+      fixture.detectChanges();
+
+      expect(seen).toEqual(['components/qits-ci/qits-ci-service']);
+      // Still open: choosing the row did not fold it, and its children are still drawn.
+      expect(items(fixture).length).toBe(4);
+      const row = items(fixture)[1];
+      expect(row.getAttribute('aria-expanded')).toBe('true');
+      expect(row.getAttribute('aria-selected')).toBe('true');
+      expect(row.classList).toContain('qits-change-tree-selected');
+    });
+
+    it('toggles on the chevron and does not move the selection', () => {
+      const fixture = render(SUBMODULE, 'components/qits-ci/qits-ci-service');
+      const seen: (string | null)[] = [];
+      fixture.componentInstance.selected.subscribe((path) => seen.push(path));
+
+      toggleButton(fixture).click();
+      fixture.detectChanges();
+
+      expect(seen).toEqual([]);
+      // The children are gone, and the row is still the chosen one.
+      expect(items(fixture).length).toBe(2);
+      expect(items(fixture)[1].getAttribute('aria-expanded')).toBe('false');
+      expect(items(fixture)[1].getAttribute('aria-selected')).toBe('true');
+      expect(toggleButton(fixture).getAttribute('aria-label')).toBe(
+        'Expand components/qits-ci/qits-ci-service',
+      );
+
+      toggleButton(fixture).click();
+      fixture.detectChanges();
+      expect(items(fixture).length).toBe(4);
+      expect(seen).toEqual([]);
+    });
+
+    it('keeps both actions reachable from the keyboard, inside one treeitem', () => {
+      const fixture = render(SUBMODULE);
+      const row = items(fixture)[1];
+      const buttons = [...row.querySelectorAll('button')];
+      expect(buttons.length).toBe(2);
+      // Ordinary buttons: in the tab order, and neither is nested inside the other.
+      expect(buttons.some((button) => button.hasAttribute('disabled'))).toBe(false);
+      expect(buttons.map((button) => button.getAttribute('tabindex'))).toEqual([null, null]);
+      expect(row.querySelectorAll('button button').length).toBe(0);
+      // The states stay on the treeitem, not on either control.
+      expect(buttons.some((button) => button.hasAttribute('aria-selected'))).toBe(false);
+      expect(buttons.some((button) => button.hasAttribute('aria-expanded'))).toBe(false);
+    });
+
+    it('leaves a plain directory with its one toggle-only control', () => {
+      const fixture = render([{ path: 'a/file.txt', changeType: 'ADDED' }]);
+      const dir = items(fixture)[0];
+      expect(dir.querySelectorAll('button').length).toBe(1);
+      expect(dir.getAttribute('aria-selected')).toBe('false');
+    });
+  });
+
   it('says so when nothing changed', () => {
     expect((render([]).nativeElement as HTMLElement).textContent).toContain('No files changed.');
   });

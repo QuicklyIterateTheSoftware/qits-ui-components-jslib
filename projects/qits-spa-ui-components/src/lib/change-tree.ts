@@ -28,6 +28,14 @@ import {
  * shut set is this component's own state for that reason — it is a view's posture, not a fact any
  * caller has an opinion about.
  *
+ * **A submodule's row is both.** A directory that carries a change of its own — a gitlink whose
+ * files are nested under it, see `change-tree-model.ts` — has two things a reader wants from it:
+ * the subtree, and the pin move. One control cannot mean both, so that row draws two: the chevron
+ * toggles, and the label selects. Every other row keeps exactly the one control it had. The
+ * `treeitem` stays the `<li>`, which is where `aria-expanded` and `aria-selected` are read from;
+ * the controls inside it are ordinary buttons, so both are reachable by Tab and the chevron names
+ * its action rather than repeating the state the row already states.
+ *
  * **The flattened list is deliberate.** A recursive component would nest one host element per level
  * and make `aria-level` a lie about the DOM; a flat list with `aria-level` is the pattern
  * assistive technology expects.
@@ -41,38 +49,75 @@ import {
         <li
           class="qits-change-tree-row"
           role="treeitem"
-          [class.qits-change-tree-selected]="row.kind === 'file' && row.path === selected()"
+          [class.qits-change-tree-selected]="isSelected(row)"
           [attr.aria-level]="row.depth + 1"
           [attr.aria-expanded]="row.kind === 'file' ? null : row.open"
-          [attr.aria-selected]="row.kind === 'file' && row.path === selected()"
+          [attr.aria-selected]="isSelected(row)"
           [style.padding-left.rem]="0.35 + row.depth * 0.85"
         >
-          <button
-            type="button"
-            class="qits-change-tree-entry"
-            [attr.data-path]="row.path"
-            [attr.data-kind]="row.kind"
-            [attr.title]="titleOf(row)"
-            (click)="press(row)"
-          >
-            @if (row.kind === 'file') {
-              <span class="qits-change-tree-gap" aria-hidden="true"></span>
-            } @else {
-              <span
-                class="qits-change-tree-chevron"
-                [class.qits-change-tree-chevron-open]="row.open"
-                aria-hidden="true"
-              ></span>
-            }
-            <span class="qits-change-tree-name">{{ row.label }}</span>
-            @if (row.change; as change) {
-              <span
-                class="qits-change-tree-mark qits-change-tree-mark-{{ toneOf(change) }}"
-                [attr.data-change]="change.changeType"
-                >{{ letterOf(change) }}</span
+          @if (isSubmodule(row)) {
+            <!-- Two controls, because the row means two things: the subtree, and the pin move. -->
+            <span class="qits-change-tree-entry qits-change-tree-entry-split">
+              <button
+                type="button"
+                class="qits-change-tree-twisty"
+                data-kind="toggle"
+                [attr.data-path]="row.path"
+                [attr.aria-label]="(row.open ? 'Collapse ' : 'Expand ') + row.path"
+                (click)="toggle(row)"
               >
-            }
-          </button>
+                <span
+                  class="qits-change-tree-chevron"
+                  [class.qits-change-tree-chevron-open]="row.open"
+                  aria-hidden="true"
+                ></span>
+              </button>
+              <button
+                type="button"
+                class="qits-change-tree-label"
+                data-kind="dir"
+                [attr.data-path]="row.path"
+                [attr.title]="titleOf(row)"
+                (click)="choose(row)"
+              >
+                <span class="qits-change-tree-name">{{ row.label }}</span>
+                @if (row.change; as change) {
+                  <span
+                    class="qits-change-tree-mark qits-change-tree-mark-{{ toneOf(change) }}"
+                    [attr.data-change]="change.changeType"
+                    >{{ letterOf(change) }}</span
+                  >
+                }
+              </button>
+            </span>
+          } @else {
+            <button
+              type="button"
+              class="qits-change-tree-entry"
+              [attr.data-path]="row.path"
+              [attr.data-kind]="row.kind"
+              [attr.title]="titleOf(row)"
+              (click)="press(row)"
+            >
+              @if (row.kind === 'file') {
+                <span class="qits-change-tree-gap" aria-hidden="true"></span>
+              } @else {
+                <span
+                  class="qits-change-tree-chevron"
+                  [class.qits-change-tree-chevron-open]="row.open"
+                  aria-hidden="true"
+                ></span>
+              }
+              <span class="qits-change-tree-name">{{ row.label }}</span>
+              @if (row.change; as change) {
+                <span
+                  class="qits-change-tree-mark qits-change-tree-mark-{{ toneOf(change) }}"
+                  [attr.data-change]="change.changeType"
+                  >{{ letterOf(change) }}</span
+                >
+              }
+            </button>
+          }
         </li>
       } @empty {
         <li class="qits-change-tree-none" role="none">No files changed.</li>
@@ -114,6 +159,45 @@ import {
     .qits-change-tree-entry:hover {
       background: #f3f4f6;
     }
+    /* A submodule row: the chevron and the label are separate controls, drawn as one line. */
+    .qits-change-tree-entry-split {
+      padding: 0;
+      gap: 0;
+      cursor: default;
+    }
+    .qits-change-tree-entry-split:hover {
+      background: none;
+    }
+    .qits-change-tree-twisty,
+    .qits-change-tree-label {
+      display: flex;
+      align-items: center;
+      padding: 0.15rem 0.35rem;
+      border: 0;
+      background: none;
+      color: inherit;
+      font: inherit;
+      font-size: 0.85rem;
+      text-align: left;
+      cursor: pointer;
+    }
+    .qits-change-tree-twisty {
+      flex: 0 0 auto;
+      border-radius: 0.25rem 0 0 0.25rem;
+      padding-right: 0.15rem;
+    }
+    .qits-change-tree-label {
+      flex: 1 1 auto;
+      gap: 0.3rem;
+      min-width: 0;
+      border-radius: 0 0.25rem 0.25rem 0;
+      padding-left: 0.15rem;
+    }
+    .qits-change-tree-twisty:hover,
+    .qits-change-tree-label:hover {
+      background: #f3f4f6;
+    }
+    /* Highlighting sits on the row's one line, so a split submodule row lights up like a file. */
     .qits-change-tree-selected > .qits-change-tree-entry {
       background: #eff6ff;
       color: #1d4ed8;
@@ -207,12 +291,30 @@ export class QitsChangeTree {
     return row.change ? qitsChangeTitle(row.change) : row.path;
   }
 
+  /** A directory carrying a change of its own — a submodule. It toggles *and* it selects. */
+  protected isSubmodule(row: QitsChangeRow): boolean {
+    return row.kind === 'dir' && row.change !== null;
+  }
+
+  /** Files and submodules can be chosen; an implied directory is never a selection. */
+  protected isSelected(row: QitsChangeRow): boolean {
+    return (row.kind === 'file' || row.change !== null) && row.path === this.selected();
+  }
+
   protected press(row: QitsChangeRow): void {
     if (row.kind === 'file') {
-      this.selected.set(row.path);
+      this.choose(row);
       return;
     }
-    // A directory only ever changes what is visible. The selection stays where the reader put it.
+    this.toggle(row);
+  }
+
+  protected choose(row: QitsChangeRow): void {
+    this.selected.set(row.path);
+  }
+
+  /** Folding only ever changes what is visible. The selection stays where the reader put it. */
+  protected toggle(row: QitsChangeRow): void {
     const next = new Set(this.closed());
     if (next.has(row.path)) {
       next.delete(row.path);

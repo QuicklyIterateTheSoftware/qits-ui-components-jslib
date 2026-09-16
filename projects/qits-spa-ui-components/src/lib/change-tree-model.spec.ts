@@ -91,6 +91,95 @@ describe('change-tree-model', () => {
     });
   });
 
+  describe('a submodule — a directory carrying a change of its own', () => {
+    const PIN: QitsChangeEntry = {
+      path: 'components/qits-ci/qits-ci-service',
+      changeType: 'MODIFIED',
+    };
+    const BEHIND: QitsChangeEntry = {
+      path: 'components/qits-ci/qits-ci-service/src/Main.java',
+      changeType: 'ADDED',
+    };
+
+    it('keeps both the pin move and the files behind it, whichever arrives first', () => {
+      const pinFirst = flattenChanges(buildChangeTree([PIN, BEHIND]));
+      const filesFirst = flattenChanges(buildChangeTree([BEHIND, PIN]));
+      expect(pinFirst).toEqual(filesFirst);
+      expect(pinFirst.map((row) => [row.kind, row.label, row.depth])).toEqual([
+        ['dir', 'components/qits-ci', 0],
+        ['dir', 'qits-ci-service', 1],
+        ['dir', 'src', 2],
+        ['file', 'Main.java', 3],
+      ]);
+    });
+
+    it('builds the identical tree from either order, not merely the same rows', () => {
+      expect(buildChangeTree([PIN, BEHIND])).toEqual(buildChangeTree([BEHIND, PIN]));
+    });
+
+    it('is a directory node, with the change on it and its children under it', () => {
+      const root = buildChangeTree([BEHIND, PIN]);
+      // components → qits-ci → qits-ci-service: the tree keeps every implied directory, and it is
+      // only the *fold* that draws the first two as one row.
+      const node = root.children[0].children[0].children[0];
+      expect(node.kind).toBe('dir');
+      expect(node.path).toBe('components/qits-ci/qits-ci-service');
+      expect(node.change).toEqual(PIN);
+      expect(node.children.map((child) => child.name)).toEqual(['src']);
+    });
+
+    it('carries the change onto the directory row so it can draw a mark', () => {
+      const flat = flattenChanges(buildChangeTree([PIN, BEHIND]));
+      expect(flat[1].kind).toBe('dir');
+      expect(flat[1].path).toBe('components/qits-ci/qits-ci-service');
+      expect(flat[1].change).toEqual(PIN);
+    });
+
+    it('stops the fold at it — as a link in a run, so it keeps its own row', () => {
+      // Without the stop, `components/qits-ci/qits-ci-service` would be one folded label and the
+      // row a reader selects to see the commits behind the bump would not exist.
+      const flat = flattenChanges(buildChangeTree([PIN, BEHIND]));
+      expect(flat[0].label).toBe('components/qits-ci');
+      expect(flat[0].chain).toEqual(['components', 'components/qits-ci']);
+      expect(flat[1].chain).toEqual(['components/qits-ci/qits-ci-service']);
+    });
+
+    it('stops the fold at it as the head of a run too', () => {
+      // `sub` carries a change and has a single directory child: the run would have swallowed it.
+      expect(
+        rows([
+          { path: 'sub', changeType: 'MODIFIED' },
+          { path: 'sub/deep/nested/file.txt', changeType: 'ADDED' },
+        ]),
+      ).toEqual([
+        { kind: 'dir', label: 'sub', path: 'sub', depth: 0 },
+        { kind: 'dir', label: 'deep/nested', path: 'sub/deep/nested', depth: 1 },
+        { kind: 'file', label: 'file.txt', path: 'sub/deep/nested/file.txt', depth: 2 },
+      ]);
+    });
+
+    it('can be folded shut like any other directory, and still draws its own row', () => {
+      const shut = flattenChanges(
+        buildChangeTree([
+          { path: 'sub', changeType: 'MODIFIED' },
+          { path: 'sub/file.txt', changeType: 'ADDED' },
+        ]),
+        new Set(['sub']),
+      );
+      expect(shut.map((row) => [row.kind, row.path, row.open])).toEqual([['dir', 'sub', false]]);
+      expect(shut[0].change).toEqual({ path: 'sub', changeType: 'MODIFIED' });
+    });
+
+    it('keeps the first entry when one path is named twice', () => {
+      const root = buildChangeTree([
+        { path: 'sub', changeType: 'MODIFIED' },
+        { path: 'sub/file.txt', changeType: 'ADDED' },
+        { path: 'sub', changeType: 'DELETED' },
+      ]);
+      expect(root.children[0].change).toEqual({ path: 'sub', changeType: 'MODIFIED' });
+    });
+  });
+
   describe('what is shut', () => {
     it('opens everything: a change set is the whole point of the view', () => {
       expect(rows([{ path: 'a/b/file.txt', changeType: 'ADDED' }]).length).toBe(2);

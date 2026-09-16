@@ -21,6 +21,23 @@ const WRAPPER_FOLD: readonly QitsChangeEntry[] = [
   { path: '.gitmodules', changeType: 'MODIFIED' },
 ];
 
+const SUBMODULE_FOLD: readonly QitsChangeEntry[] = [
+  { path: '.gitmodules', changeType: 'MODIFIED' },
+  // The gitlink itself — the row a reader selects to see the commits behind the bump …
+  { path: 'components/qits-ci/qits-ci-service', changeType: 'MODIFIED' },
+  // … and the sibling's own changed files, hoisted into the same tree underneath it.
+  { path: 'components/qits-ci/qits-ci-service/pom.xml', changeType: 'MODIFIED' },
+  {
+    path: 'components/qits-ci/qits-ci-service/src/main/java/ClaimWorker.java',
+    changeType: 'MODIFIED',
+  },
+  { path: 'components/qits-projects/qits-projects-service', changeType: 'MODIFIED' },
+  {
+    path: 'components/qits-projects/qits-projects-service/src/main/java/Fold.java',
+    changeType: 'ADDED',
+  },
+];
+
 const meta: Meta<QitsChangeTree> = {
   title: 'Components/ChangeTree',
   component: QitsChangeTree,
@@ -45,6 +62,17 @@ export const EveryChangeType: Story = { name: 'Every change type' };
 export const CollapsedChain: Story = {
   name: 'Collapsed chain',
   args: { entries: WRAPPER_FOLD, selected: 'components/qits-ci/qits-ci-service/pom.xml' },
+};
+
+/**
+ * A wrapper release request with the submodules' own files hoisted into the same tree. Each
+ * gitlink row — `qits-ci-service`, `qits-projects-service` — carries its **own** change mark for
+ * the pin move *and* holds the files behind that bump. Such a row is never folded into the label
+ * above it, and it has two controls: the chevron opens it, the label selects it.
+ */
+export const SubmoduleBump: Story = {
+  name: 'Submodule bump',
+  args: { entries: SUBMODULE_FOLD, selected: 'components/qits-ci/qits-ci-service' },
 };
 
 /** Nothing folded and nothing deep — the ordinary shallow case, for comparison. */

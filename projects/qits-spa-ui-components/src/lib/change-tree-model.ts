@@ -17,6 +17,29 @@
  * The fold joins the chain into a single segment string rather than a run of dimmed prefixes:
  * `components/qits-projects/qits-projects-service` reads as the one address it is, and the row
  * count for that path drops from four to two.
+ *
+ * **A directory may carry a change of its own, and that is how a submodule is spelled.** A wrapper
+ * release request changes a gitlink — one entry at `components/qits-ci/qits-ci-service`, of type
+ * `MODIFIED`, whose content is the pin move — and the reader wants the files behind that bump in
+ * the *same* tree, nested under the path they belong to. So the sibling repository's changed files
+ * arrive as entries below that same path. The node where the two meet is therefore both a directory
+ * (it has children) and a change (the pin move): expandable *and* selectable, because selecting it
+ * is how a reader asks for the commits behind the bump. Nothing new is needed on the input to say
+ * so — a caller states it by having entries both *at* and *below* a path, which is exactly what the
+ * service already emits, and the model reads the shape rather than a flag it would have to trust.
+ *
+ * Two consequences fall out of that, and both are load-bearing:
+ *
+ * - **Building is order-independent.** The entries arrive in whatever order the fold produced them,
+ *   and the gitlink's own entry may come before or after the files under it. Neither order may lose
+ *   a row. An entry landing where a directory already stands attaches its change to that directory;
+ *   a directory needed under a path where a file node already stands promotes that node in place,
+ *   keeping its change and its path. The earlier model dropped the first case on the floor and
+ *   hung children off a `'file'` node in the second — silently, and differently depending on the
+ *   order, which is the worst way for a view to be wrong.
+ * - **The fold stops at such a directory**, as the head of a run and as a link in it. Folding exists
+ *   to delete rows nobody would click; a submodule's row is precisely a row somebody clicks, so
+ *   swallowing it into the label above it would take the selection away with it.
  */
 
 /** The service's `CommitFileChangeDto.changeType` vocabulary, spelled as it arrives on the wire. */
@@ -48,7 +71,13 @@ export interface QitsChangeNode {
   /** The last segment, which is what an unfolded row shows. */
   readonly name: string;
   readonly children: readonly QitsChangeNode[];
-  /** The change a file node stands for. Always null on a directory. */
+  /**
+   * The change this node stands for, or null where the node is only an implied directory.
+   *
+   * A file node always has one. A *directory* has one exactly when the change set named the
+   * directory's own path as well as paths beneath it — which is a submodule: its own change is the
+   * pin move recorded in the parent repository, and its children are the files behind that bump.
+   */
   readonly change: QitsChangeEntry | null;
 }
 
@@ -80,7 +109,13 @@ export interface QitsChangeRow {
   readonly depth: number;
   /** Whether this row's children are showing. Always false on a file row. */
   readonly open: boolean;
-  /** The change a file row draws its mark from. Always null on a directory row. */
+  /**
+   * The change this row draws its mark from, or null where the row is only an implied directory.
+   *
+   * A file row always has one. A directory row has one when it is a submodule — the row stands for
+   * the pin move as well as for the subtree — and such a row is never folded into the label above
+   * it, so the change on it always belongs to the row's own `path`.
+   */
   readonly change: QitsChangeEntry | null;
 }
 
@@ -139,7 +174,8 @@ export function flattenChanges(
         chain: chain.map((node) => node.path),
         depth,
         open,
-        change: null,
+        // Only a submodule's directory has one, and the fold never puts one anywhere but the tail.
+        change: tail.change,
       });
       if (open) {
         walk(tail, depth + 1);
@@ -235,8 +271,15 @@ function addChange(root: Draft, entry: QitsChangeEntry): void {
     node = childDraft(node, segments[at]);
   }
   const name = segments[segments.length - 1];
-  if (node.children.has(name)) {
-    // A directory already stands here, or this path arrived twice. Neither may be replaced.
+  const existing = node.children.get(name);
+  if (existing) {
+    // A directory already stands here — the files behind a submodule's bump arrived before the
+    // bump itself. The directory takes the change; it does not lose it and it does not become a
+    // file. A second entry for a path that already has a change is the duplicate case, and the
+    // first entry keeps the row.
+    if (existing.change === null) {
+      existing.change = entry;
+    }
     return;
   }
   const made = newDraft('file', joinPath(node.path, name), name);
@@ -247,6 +290,11 @@ function addChange(root: Draft, entry: QitsChangeEntry): void {
 function childDraft(parent: Draft, name: string): Draft {
   const existing = parent.children.get(name);
   if (existing) {
+    // A file node standing where a directory is needed is a submodule whose own entry arrived
+    // first. Promote it in place: the path and the change are the row's, and the children are
+    // about to be hung off it. Replacing it would drop the pin move, which is the other order's
+    // bug read backwards.
+    existing.kind = 'dir';
     return existing;
   }
   const made = newDraft('dir', joinPath(parent.path, name), name);
@@ -277,13 +325,20 @@ function rankOf(node: QitsChangeNode): number {
 /**
  * Fold a run of single-child directories into one row. The run stops at the first directory with
  * more than one child, and at a directory whose only child is a file — a file is a row of its own.
+ *
+ * It also stops at a directory carrying a change, at both ends: such a directory is a submodule,
+ * and its row is one a reader selects to see the commits behind the bump. A row somebody chooses
+ * cannot be a segment of somebody else's label.
  */
 function foldChain(head: QitsChangeNode): readonly QitsChangeNode[] {
   const chain: QitsChangeNode[] = [head];
+  if (head.change) {
+    return chain;
+  }
   let node = head;
   for (;;) {
     const only = node.children.length === 1 ? node.children[0] : null;
-    if (!only || only.kind !== 'dir') {
+    if (!only || only.kind !== 'dir' || only.change) {
       return chain;
     }
     chain.push(only);
