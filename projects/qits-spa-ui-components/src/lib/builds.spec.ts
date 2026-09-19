@@ -107,6 +107,73 @@ describe('toBuilds', () => {
       }).map((run) => run.expectedStepDurationsMillis),
     ).toEqual([undefined, undefined, undefined, undefined]);
   });
+
+  /**
+   * The step timings and the live pointer. **Both are optional on the wire and must stay so**: an
+   * older qits-ci answers without either, and a row drawn from such an answer renders exactly as it
+   * rendered before the fields existed — a track of bubbles nothing has started.
+   */
+  describe('the step timings', () => {
+    it('carries the steps and the live pointer through', () => {
+      const [run] = toBuilds({
+        runs: [
+          {
+            id: 'a',
+            repoName: 'r',
+            steps: [{ stepIndex: 0, startedAt: '2026-09-07T11:00:00Z', finishedAt: 'x' }],
+            live: { stepIndex: 1, startedAt: '2026-09-07T11:01:00Z' },
+          },
+        ],
+      });
+      expect(run.steps).toEqual([
+        { stepIndex: 0, startedAt: '2026-09-07T11:00:00Z', finishedAt: 'x' },
+      ]);
+      expect(run.live).toEqual({ stepIndex: 1, startedAt: '2026-09-07T11:01:00Z' });
+    });
+
+    it('leaves both absent where the listing does not carry them', () => {
+      const [run] = toBuilds({ runs: [{ id: 'a', repoName: 'r' }] });
+      expect(run.steps).toBeUndefined();
+      expect(run.live).toBeUndefined();
+    });
+
+    /**
+     * A malformed timing is dropped rather than dropping the set — unlike the expectations, which
+     * are proportions of one another. A timing is a fact about one step alone, and a step that
+     * cannot be keyed is simply a step the track does not know has started.
+     */
+    it('drops an entry whose stepIndex is not a key, and keeps the rest', () => {
+      const [run] = toBuilds({
+        runs: [
+          {
+            id: 'a',
+            repoName: 'r',
+            steps: [
+              { stepIndex: -1, startedAt: 's' },
+              { stepIndex: 1.5, startedAt: 's' },
+              { startedAt: 's' },
+              { stepIndex: null, startedAt: 's' },
+              { stepIndex: 2, startedAt: 's' },
+            ],
+          },
+        ],
+      });
+      expect(run.steps).toEqual([{ stepIndex: 2, startedAt: 's', finishedAt: undefined }]);
+    });
+
+    it('is not a live step without a keyable stepIndex', () => {
+      expect(
+        toBuilds({
+          runs: [
+            { id: 'a', repoName: 'r', live: { startedAt: 's' } },
+            { id: 'b', repoName: 'r', live: null },
+            { id: 'c', repoName: 'r', live: { stepIndex: -2 } },
+            { id: 'd', repoName: 'r', steps: [] },
+          ],
+        }).map((run) => run.live ?? run.steps),
+      ).toEqual([undefined, undefined, undefined, undefined]);
+    });
+  });
 });
 
 describe('buildConfigName', () => {

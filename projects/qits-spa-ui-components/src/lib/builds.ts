@@ -44,6 +44,45 @@ export interface QitsBuild {
    * where there is not, which is the only honest pair of states for a prediction.
    */
   readonly expectedStepDurationsMillis?: readonly number[];
+  /**
+   * When each step of this run really ran, as qits-ci recorded it — **keyed by `stepIndex`, never
+   * by position**. Steps are persisted as they end, so mid-run this array is shorter than the
+   * pipeline and its element order says nothing about which step is which; qits-ci's own run page
+   * keys by `stepIndex` for exactly that reason and so does everything here.
+   *
+   * <p>Absent from an older qits-ci, which listed a run without its steps at all. The step track is
+   * then a set of bubbles nothing has started, which is the honest reading of "we know the shape of
+   * this run and nothing about where it has got to" — and strictly better than the bar this
+   * replaced, which filled against a total it could not place.
+   */
+  readonly steps?: readonly QitsBuildStepTiming[];
+  /**
+   * The step the run is in right now, and when it started. The one fact the persisted steps cannot
+   * carry: a step is written at its end, so the step in flight is in no `steps` entry until it is
+   * no longer in flight.
+   */
+  readonly live?: QitsBuildLiveStep;
+}
+
+/**
+ * One step of a run, as the active listing carries it — **with the step's OUTPUT omitted**.
+ *
+ * The output is the only heavy part of a step and no header affordance renders it, so widening the
+ * listing to carry the timings costs a few bytes a run rather than a log per step. What is here is
+ * what a boundary-true bar needs and nothing else: which step, and its two instants.
+ */
+export interface QitsBuildStepTiming {
+  /** The step's position in the pipeline, zero-based. The key — see {@link QitsBuild.steps}. */
+  readonly stepIndex: number;
+  readonly startedAt?: string;
+  /** Absent only for a step that has not ended; a persisted step normally carries both. */
+  readonly finishedAt?: string;
+}
+
+/** The step in flight: which one, and since when. */
+export interface QitsBuildLiveStep {
+  readonly stepIndex: number;
+  readonly startedAt?: string;
 }
 
 /** The body qits-ci answers the active listing with. Every field optional: this is another service. */
@@ -58,6 +97,21 @@ export interface QitsBuildRuns {
     readonly createdAt?: string | null;
     readonly startedAt?: string | null;
     readonly expectedStepDurationsMillis?: readonly number[] | null;
+    /**
+     * Optional on the wire and **it must stay so**: an older qits-ci answers without it, and a row
+     * drawn from such an answer has to render exactly as it rendered before this field existed.
+     */
+    readonly steps?:
+      | readonly {
+          readonly stepIndex?: number | null;
+          readonly startedAt?: string | null;
+          readonly finishedAt?: string | null;
+        }[]
+      | null;
+    readonly live?: {
+      readonly stepIndex?: number | null;
+      readonly startedAt?: string | null;
+    } | null;
   }[];
 }
 
@@ -216,6 +270,45 @@ function toExpectations(values: unknown): readonly number[] | undefined {
   return usable ? (values as readonly number[]) : undefined;
 }
 
+/** A `stepIndex` this library would key by: a whole number, zero or above, and nothing else. */
+function toStepIndex(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : undefined;
+}
+
+/**
+ * The run's real step timings, or nothing at all.
+ *
+ * <p>Unlike {@link toExpectations}, **a malformed entry is dropped rather than dropping the set**,
+ * and the difference is not an inconsistency. The expectations are proportions of one another, so a
+ * bad one silently redraws every other step's width; a timing is a fact about one step alone, and a
+ * step this cannot key is simply a step the track does not know has started — which is exactly how
+ * it draws every step of a run an older qits-ci listed without timings at all. Dropping the whole
+ * set for one bad entry would throw away true facts about the other steps to punish one.
+ */
+function toStepTimings(values: unknown): readonly QitsBuildStepTiming[] | undefined {
+  if (!Array.isArray(values)) return undefined;
+  const timings = values
+    .map((row): QitsBuildStepTiming | undefined => {
+      const stepIndex = toStepIndex((row as { stepIndex?: unknown })?.stepIndex);
+      if (stepIndex === undefined) return undefined;
+      const { startedAt, finishedAt } = row as {
+        startedAt?: string | null;
+        finishedAt?: string | null;
+      };
+      return { stepIndex, startedAt: startedAt || undefined, finishedAt: finishedAt || undefined };
+    })
+    .filter((timing): timing is QitsBuildStepTiming => timing !== undefined);
+  return timings.length > 0 ? timings : undefined;
+}
+
+/** The step in flight. Without a keyable `stepIndex` there is no step it could be about. */
+function toLiveStep(value: unknown): QitsBuildLiveStep | undefined {
+  const stepIndex = toStepIndex((value as { stepIndex?: unknown })?.stepIndex);
+  if (stepIndex === undefined) return undefined;
+  const { startedAt } = value as { startedAt?: string | null };
+  return { stepIndex, startedAt: startedAt || undefined };
+}
+
 /** A row with neither an id nor a repository is not something the panel can draw a line for. */
 function toBuild(row: NonNullable<QitsBuildRuns['runs']>[number]): QitsBuild | undefined {
   if (!row?.id || !row.repoName) return undefined;
@@ -231,6 +324,8 @@ function toBuild(row: NonNullable<QitsBuildRuns['runs']>[number]): QitsBuild | u
     createdAt: row.createdAt || undefined,
     startedAt: row.startedAt || undefined,
     expectedStepDurationsMillis: toExpectations(row.expectedStepDurationsMillis),
+    steps: toStepTimings(row.steps),
+    live: toLiveStep(row.live),
   };
 }
 

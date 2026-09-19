@@ -1472,12 +1472,16 @@ describe('QitsMainLayout', () => {
     });
 
     /**
-     * The expected shape of a run, and what it has actually taken. The clock is fixed here on
-     * purpose: every number below is a subtraction the panel does locally, and a spec that let the
-     * real clock move would be asserting the machine's speed rather than the arithmetic.
+     * The run's step track, and what the run as a whole has actually taken. The clock is fixed here
+     * on purpose: every number below is a subtraction the panel does locally, and a spec that let
+     * the real clock move would be asserting the machine's speed rather than the arithmetic.
+     *
+     * <p>The track itself is `QitsStepProgress` and is specified in its own file. What is asserted
+     * here is the layout's half of the job: which real instant it gives to which predicted step,
+     * that an answer carrying none still draws, and the bare elapsed beside the track.
      */
-    describe('the expected-duration bar', () => {
-      /** Ten seconds then ninety — the example the bar is specified by. */
+    describe('the step track', () => {
+      /** Ten seconds then ninety — the example the track is specified by. */
       const EXPECTED = [10_000, 90_000] as const;
       const NOW = Date.parse('2026-09-07T12:00:00.000Z');
 
@@ -1505,7 +1509,7 @@ describe('QitsMainLayout', () => {
 
       function steps(fixture: ComponentFixture<unknown>): HTMLElement[] {
         return [
-          ...fixture.nativeElement.querySelectorAll('.qits-layout-build-step'),
+          ...fixture.nativeElement.querySelectorAll('.qits-step-progress-step'),
         ] as HTMLElement[];
       }
 
@@ -1516,7 +1520,13 @@ describe('QitsMainLayout', () => {
 
       function fills(fixture: ComponentFixture<unknown>): number[] {
         return steps(fixture).map((step) =>
-          percent(step.querySelector('.qits-layout-build-step-fill') as HTMLElement, 'width'),
+          percent(step.querySelector('.qits-step-progress-fill') as HTMLElement, 'width'),
+        );
+      }
+
+      function stepLabels(fixture: ComponentFixture<unknown>): (string | undefined)[] {
+        return [...fixture.nativeElement.querySelectorAll('.qits-step-progress-label')].map((n) =>
+          (n as HTMLElement).textContent?.trim(),
         );
       }
 
@@ -1530,7 +1540,7 @@ describe('QitsMainLayout', () => {
       afterEach(() => vi.useRealTimers());
 
       /** The old service, and every run of a pipeline nobody has measured yet. */
-      it('draws no bar at all for a run qits-ci predicted nothing about', () => {
+      it('draws no track at all for a run qits-ci predicted nothing about', () => {
         const fixture = renderBuilds(RUNS);
         open(fixture);
         expect(bars(fixture)).toEqual([]);
@@ -1550,29 +1560,6 @@ describe('QitsMainLayout', () => {
         expect(percent(short, 'marginRight')).toBeCloseTo(1);
         expect(percent(long, 'width')).toBeCloseTo(90);
         expect(percent(long, 'marginRight')).toBeCloseTo(0);
-        expect(
-          percent(short, 'width') +
-            percent(short, 'marginRight') +
-            percent(long, 'width') +
-            percent(long, 'marginRight'),
-        ).toBeCloseTo(100);
-      });
-
-      /** A step too short to give a whole seam away gives what it has, and never a negative width. */
-      it('never draws a sliver of a step at a negative width', () => {
-        const fixture = renderBuilds([
-          predicted({
-            status: 'QUEUED',
-            createdAt: ago(1),
-            expectedStepDurationsMillis: [200, 99_800],
-          }),
-        ]);
-        open(fixture);
-
-        const [sliver] = steps(fixture);
-        expect(percent(sliver, 'width')).toBeGreaterThanOrEqual(0);
-        expect(percent(sliver, 'width')).toBeCloseTo(0);
-        expect(percent(sliver, 'marginRight')).toBeCloseTo(0.2);
       });
 
       it('shows a run waiting for a worker the shape of what it will do, empty', () => {
@@ -1580,35 +1567,94 @@ describe('QitsMainLayout', () => {
         open(fixture);
         expect(bars(fixture)).toHaveLength(1);
         expect(fills(fixture)).toEqual([0, 0]);
+        expect(stepLabels(fixture)).toEqual(['10s', '1m 30s']);
       });
 
-      /** Fifty seconds into a hundred: the first step is done and the second is 40/90 through it. */
-      it('fills left to right against the clock, step by step', () => {
+      /**
+       * **The answer an older qits-ci gives**: a prediction and no step timings at all. Every
+       * bubble is unstarted, so the panel says what the run is expected to do and nothing about
+       * where it has got to — which is the honest reading of that answer, and strictly better than
+       * the bar this replaced, which filled from wall-clock elapsed against a total it could not
+       * place on any particular step.
+       */
+      it('draws empty bubbles for a listing that carries no step timings', () => {
         const fixture = renderBuilds([
           predicted({ status: 'RUNNING', createdAt: ago(60), startedAt: ago(50) }),
         ]);
         open(fixture);
 
-        const [first, second] = fills(fixture);
-        expect(first).toBeCloseTo(100);
-        expect(second).toBeCloseTo((40 / 90) * 100);
+        expect(steps(fixture)).toHaveLength(2);
+        expect(fills(fixture)).toEqual([0, 0]);
+        // The run's own elapsed is a different fact and is unaffected by any of this.
+        expect(elapsed(fixture)).toEqual(['50s']);
       });
 
       /**
-       * Past its prediction and still going. The bar stays full rather than overflowing — being
-       * late is a fact about the run, not a reason to draw a wider track than there is.
+       * **Keyed by `stepIndex`, never by position.** qits-ci persists a step as it ends, so this
+       * run — three steps in, with only the first and third finished — hands over an array whose
+       * second element is step 2 of the pipeline. Zipping would give step 1's duration to step 2.
        */
-      it('keeps the bar full, in another tone, for a run that has outrun its prediction', () => {
+      it('matches a step timing to its predicted step by stepIndex, not by position', () => {
         const fixture = renderBuilds([
-          predicted({ status: 'RUNNING', createdAt: ago(160), startedAt: ago(150) }),
+          predicted({
+            status: 'RUNNING',
+            createdAt: ago(200),
+            startedAt: ago(190),
+            expectedStepDurationsMillis: [10_000, 90_000, 30_000],
+            steps: [
+              { stepIndex: 2, startedAt: ago(40), finishedAt: ago(10) },
+              { stepIndex: 0, startedAt: ago(190), finishedAt: ago(185) },
+            ],
+          }),
         ]);
         open(fixture);
 
-        expect(fills(fixture)).toEqual([100, 100]);
+        // Step 0 took 5s of its 10s, step 1 has not started, step 2 took 30s of its 30s.
+        expect(fills(fixture)).toEqual([100, 0, 100]);
+        expect(stepLabels(fixture)).toEqual(['5s / 10s', '1m 30s', '30s / 30s']);
+      });
+
+      /** The step in flight is in no persisted entry yet; `live` is the only thing that carries it. */
+      it('takes the in-flight step start from live, at the index live names', () => {
+        const fixture = renderBuilds([
+          predicted({
+            status: 'RUNNING',
+            createdAt: ago(60),
+            startedAt: ago(50),
+            steps: [{ stepIndex: 0, startedAt: ago(50), finishedAt: ago(45) }],
+            live: { stepIndex: 1, startedAt: ago(45) },
+          }),
+        ]);
+        open(fixture);
+
+        const [first, second] = fills(fixture);
+        expect(first).toBeCloseTo(100);
+        expect(second).toBeCloseTo((45 / 90) * 100);
+        expect(stepLabels(fixture)).toEqual(['5s / 10s', '45s / 1m 30s']);
+      });
+
+      /**
+       * **The regression the whole change is about.** The first step has run for 150s against a 10s
+       * expectation — past the run's own predicted total — and the second bubble is still empty,
+       * because the second step has not started. The bar this replaced would have had it full.
+       */
+      it('leaves a later bubble empty while an earlier step overruns', () => {
+        const fixture = renderBuilds([
+          predicted({
+            status: 'RUNNING',
+            createdAt: ago(160),
+            startedAt: ago(150),
+            live: { stepIndex: 0, startedAt: ago(150) },
+          }),
+        ]);
+        open(fixture);
+
+        expect(fills(fixture)).toEqual([100, 0]);
         expect(steps(fixture).map((step) => percent(step, 'width'))).toEqual([9, 90]);
-        expect(
-          fixture.nativeElement.querySelectorAll('.qits-layout-build-step-overdue'),
-        ).toHaveLength(2);
+        // The quieter tone, on the overrunning step's own bubble and no other.
+        expect(fixture.nativeElement.querySelectorAll('.qits-step-progress-overdue')).toHaveLength(
+          1,
+        );
         expect(elapsed(fixture)).toEqual(['2m 30s']);
       });
 
@@ -1631,13 +1677,15 @@ describe('QitsMainLayout', () => {
        * The number moves without anything being asked for. That is the whole reason it ticks
        * locally: `now - startedAt` is a subtraction, and polling qits-ci to learn it would turn a
        * panel somebody left open into traffic.
+       *
+       * <p>Nothing is in flight here, so the panel's clock is the only one running — the track's
+       * own clock is started by a step, not by the panel.
        */
       it('ticks the number every second while the panel is open, and stops when it closes', () => {
         const fixture = renderBuilds([
           predicted({ status: 'RUNNING', createdAt: ago(60), startedAt: ago(41) }),
         ]);
         const idle = vi.getTimerCount();
-
         open(fixture);
         expect(vi.getTimerCount()).toBe(idle + 1);
         expect(elapsed(fixture)).toEqual(['41s']);
@@ -1645,10 +1693,35 @@ describe('QitsMainLayout', () => {
         vi.advanceTimersByTime(1000);
         fixture.detectChanges();
         expect(elapsed(fixture)).toEqual(['42s']);
-        // And the bar moved with it: one more second of the second step.
-        expect(fills(fixture)[1]).toBeCloseTo((32 / 90) * 100);
 
         // Closed, nothing ticks — exactly as nothing is asked for.
+        open(fixture);
+        expect(vi.getTimerCount()).toBe(idle);
+      });
+
+      /**
+       * Two clocks while a step is in flight, and they are two on purpose: this one counts the
+       * panel being open, the track's counts a step being under way. Closing the panel destroys
+       * the track, so both stop together.
+       */
+      it('stops the track’s own clock with the panel it is inside', () => {
+        const fixture = renderBuilds([
+          predicted({
+            status: 'RUNNING',
+            createdAt: ago(60),
+            startedAt: ago(41),
+            live: { stepIndex: 1, startedAt: ago(31) },
+          }),
+        ]);
+        const idle = vi.getTimerCount();
+        open(fixture);
+        expect(vi.getTimerCount()).toBe(idle + 2);
+
+        vi.advanceTimersByTime(1000);
+        fixture.detectChanges();
+        // The bar moved with the number: one more second of the second step's own expectation.
+        expect(fills(fixture)[1]).toBeCloseTo((32 / 90) * 100);
+
         open(fixture);
         expect(vi.getTimerCount()).toBe(idle);
       });

@@ -41,11 +41,19 @@ export {
 } from './lib/builds';
 export type {
   QitsBuild,
+  QitsBuildLiveStep,
   QitsBuildRuns,
   QitsBuildsSource,
+  QitsBuildStepTiming,
   QitsEventSourceFactory,
   QitsEventSourceLike,
 } from './lib/builds';
+export {
+  QitsStepProgress,
+  QITS_BUILD_STEP_GAP,
+  QITS_STEP_PROGRESS_TICK_MS,
+} from './lib/step-progress';
+export type { QitsStepProgressStep } from './lib/step-progress';
 export { QitsNavSubmenu, QitsNavSubmenuSlot } from './lib/nav-submenu';
 export {
   provideQitsProjects,

@@ -26,6 +26,7 @@ opened the panel over it.
 | `QitsNavSubmenu` | `[qitsNavSubmenu]`   | Marks an `<ng-template>` as the sub-menu under the current navigation row. The layout gives it a box; the app styles what goes in it.                                                                                            |
 | `QitsDiffViewer` | `<qits-diff-viewer>` | A file's unified diff, coloured by line. `patch` is git's own text and `path` the file it is of; it renders, it never fetches.                                                                                                   |
 | `QitsChangeTree` | `<qits-change-tree>` | The files a change set touches, as a tree. `entries` (`{ path, previousPath, changeType }[]`), two-way `selected`, `label`. Single-child directory chains fold into one row.                                                     |
+| `QitsStepProgress` | `<qits-step-progress>` | A pipeline's steps as a segmented track: one bubble per planned step, each filling against **its own** expected duration with its actual/expected beside it. Required `steps` (`{ expectedMillis, startedAt?, finishedAt? }[]`), `label`. |
 
 ## A diff is rendered, never fetched
 
@@ -436,24 +437,53 @@ reader came in through — `QitsAppLinks.href('qits-ci', …)`, a full-document 
 qits-ci is another application on a host of its own. A platform that names no ci host gives no
 honest address, and the row is then the same four facts as text rather than a link to nowhere.
 
-**And, where qits-ci predicted one, the run's expected shape.** `expectedStepDurationsMillis` is one
-p95 per pipeline step, and the bar under the facts is that prediction drawn to scale: the track is
-divided per step in proportion to how long each is expected to take, with a small seam at every
-boundary — two steps of 10s and 90s are 9%, a 1% seam, 90%, the seam carved out of the step _before_
-it so the last step keeps its whole share. A `RUNNING` run fills it left to right against
-`now - startedAt`; one still queued shows the shape empty. Past the prediction the bar stays full in
-a quieter tone rather than overflowing: late is a fact about the run, not a wider track.
+**And, where qits-ci predicted one, the run's shape — per step, and boundary-true.** Under the facts
+sits `QitsStepProgress`, this library's own segmented track, with `expectedStepDurationsMillis` for
+the widths and the run's real step timings for the fills:
 
-Beside the bar, what the run has **actually** taken — since `startedAt` for one under way, since
-`createdAt` for one still waiting, rendered `41s` / `4m 12s` / `1h 04m` exactly as qits-ci's own run
-page renders it. It ticks off a **local** clock, once a second, while the panel is open and never
-otherwise: `now - startedAt` is a subtraction, and polling qits-ci to learn what a subtraction knows
-would turn a panel somebody left open into traffic.
+    [---____] 90s / 250s   [____] 200s
 
-All three fields are optional on the wire. A run that carries none of them — an older qits-ci, a
-pipeline nobody has measured yet — is drawn exactly as every row was before there was a bar to draw,
-and a prediction with one unusable entry is dropped whole, because the segments are proportions of
-one another and a wrong shape is worse than no shape.
+One bubble per **planned** step of the pipeline. A bubble's width is that step's share of the
+expected total, with a small seam at every boundary — two steps of 10s and 90s are 9%, a 1% seam,
+90%, the seam carved out of the step _before_ it so the last step keeps its whole share. A bubble's
+**fill is that step's own elapsed against that step's own expected**, and **a bubble does not begin
+to fill until its step has actually started**: a step that overruns fills its own bubble, shifts to
+a quieter tone and stops there, never consuming the next one's. Beside each bubble, `<actual> /
+<expected>` for a step that has started and just `<expected>` for one that has not.
+
+That per-step rule is the change. The bar used to draw the seams at each step's predicted share and
+then fill the *whole track* from wall-clock elapsed against the predicted *total*, which is exactly
+backwards from what a segmented bar appears to promise: a step that overran eclipsed the following
+seams, and a step that finished early left the next segment filling before that step had started.
+The seams were real boundaries of a prediction, drawn as if they were boundaries of the build.
+Nothing new is measured to fix it — every number comes from the p95 array and step timestamps that
+already exist — and the same component is what qits-ci-frontend draws, so there is one copy of this
+arithmetic rather than two.
+
+The track ticks off a **local** clock, once a second, and **only while a step is in flight**:
+`now - startedAt` is a subtraction, and polling qits-ci to learn what a subtraction knows would turn
+a panel somebody left open into traffic. A run that is entirely finished or entirely unstarted does
+not tick at all.
+
+Beside the track, what the run as a whole has **actually** taken — since `startedAt` for one under
+way, since `createdAt` for one still waiting, rendered `41s` / `4m 12s` / `1h 04m` exactly as
+qits-ci's own run page renders it. That is a different fact from the per-step numbers and is the
+layout's own, on the panel's clock, while the panel is open and never otherwise.
+
+The listing carries `steps` (each with its `stepIndex` and its two instants, the step's **output
+omitted**) and `live` (the step in flight, which is in no persisted entry yet) for this. A timing is
+matched to its predicted step **by `stepIndex`, never by array position**: qits-ci persists a step
+as it ends, so mid-run the array is shorter than the pipeline and its indices are not list
+positions.
+
+Every one of these fields is optional on the wire and stays so. A run that carries no prediction —
+an older qits-ci, a pipeline nobody has measured yet — is drawn exactly as every row was before
+there was a bar to draw, and a prediction with one unusable entry is dropped whole, because the
+widths are proportions of one another and a wrong shape is worse than no shape. A run that carries
+a prediction but **no step timings** — an older qits-ci answering the widened listing's shape
+without its new fields — draws a track of empty bubbles showing only the expectations. That is the
+honest reading of "we know the shape and nothing about where it has got to", and it is strictly
+better than the old bar, which filled against a total it could not place on any particular step.
 
 An empty queue says "Nothing building.", a read still in flight "Checking…", and a `/ci` that could
 not be reached one quiet line — "Builds unavailable." — inside the panel. That last one is the

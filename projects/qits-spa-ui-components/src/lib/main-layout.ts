@@ -14,7 +14,8 @@ import { RouterOutlet } from '@angular/router';
 
 import { QitsAppLinks, QITS_BROWSER_ORIGIN } from './app-links';
 import { QitsBadge } from './badge';
-import { buildConfigName, QITS_BUILDS, QITS_BUILD_RUNNING } from './builds';
+import { buildConfigName, QITS_BUILDS, QITS_BUILD_RUNNING, type QitsBuild } from './builds';
+import { formatElapsed, instantMs } from './duration';
 import { QitsNavSubmenuSlot } from './nav-submenu';
 import {
   QITS_NAVIGATION,
@@ -26,6 +27,7 @@ import { QitsPicker, type QitsPickerOption } from './picker';
 import { QITS_PROJECTS } from './projects';
 import { QITS_REPOSITORIES, type QitsRepository } from './repositories';
 import { QITS_CATEGORIES, QITS_SCOPE, scopeGroup, scopePath, type QitsScope } from './scope';
+import { QitsStepProgress, type QitsStepProgressStep } from './step-progress';
 
 /** `/ci` and `/ci/` name the same application; comparing normalised paths keeps the match honest. */
 function toDirectoryPath(href: string): string {
@@ -53,24 +55,15 @@ function link(origin: string | undefined, scope: QitsScope, path: string): strin
   return origin ? `${origin.replace(/\/+$/, '')}${tail}` : tail;
 }
 
-/** How often the panel's own clock moves while it is open. A second, because it counts seconds. */
-const QITS_BUILD_TICK_MS = 1000;
-
 /**
- * The width of a step boundary on the expected-duration bar, as a percentage of the whole track.
- * Small on purpose: it is a seam telling one step from the next, not a gap of its own meaning.
+ * How often the panel's own clock moves while it is open. A second, because it counts seconds.
+ *
+ * <p>Deliberately not shared with `QITS_STEP_PROGRESS_TICK_MS`, which is the same number for
+ * a different clock: this one is the row's bare elapsed and runs while the *panel* is open, that
+ * one is the step track's and runs while a *step* is in flight. Two lifecycles that happen to
+ * agree on a period are not one constant.
  */
-const QITS_BUILD_STEP_GAP = 1;
-
-/** One step of a run's expected shape, as a box on the track. All three are percentages. */
-interface QitsBuildStep {
-  /** The step's share of the track, with the boundary gap that follows it already taken out. */
-  readonly width: number;
-  /** The boundary after it — zero for the last step, which keeps its whole share. */
-  readonly gap: number;
-  /** How much of this step's own box the run has done: 0 for a step not reached, 100 for one past. */
-  readonly fill: number;
-}
+const QITS_BUILD_TICK_MS = 1000;
 
 /** One line of the pending-builds panel: a run, reduced to what a header affordance can show. */
 interface QitsBuildRow {
@@ -86,71 +79,46 @@ interface QitsBuildRow {
    * there is no address this library can honestly spell.
    */
   readonly href?: string;
-  /** The expected shape of the run, or `undefined` where qits-ci predicted none. */
-  readonly steps?: readonly QitsBuildStep[];
-  /** The run has outrun its own prediction: the bar is full and it is still going. */
-  readonly overdue: boolean;
+  /**
+   * The run's steps for {@link QitsStepProgress}, or `undefined` where qits-ci predicted nothing
+   * and there is therefore no track to draw at all.
+   */
+  readonly steps?: readonly QitsStepProgressStep[];
   /** How long it has actually taken so far, already formatted. */
   readonly elapsed: string;
 }
 
-/** `a` between `low` and `high`, both ends included. */
-function clamp(value: number, low: number, high: number): number {
-  return Math.min(high, Math.max(low, value));
-}
-
-function pad(value: number): string {
-  return value.toString().padStart(2, '0');
-}
-
 /**
- * `41s`, `4m 12s`, `1h 04m` — a span, at the precision worth reading at that length.
+ * A run's planned steps, as the segmented track wants them: one entry per predicted step, with the
+ * real instants of the step that actually ran at that index.
  *
- * A **copy** of qits-ci's own `formatElapsed`, character for character, rather than an import: this
- * package depends on no qits module, and a duration a reader sees in the bolt has to be the same
- * string they see on the run page they click through to. Copying is the policy; drifting is not.
+ * <p><b>The timings are matched by `stepIndex`, never by array position.</b> qits-ci persists a
+ * step as it ends, so mid-run `run.steps` is shorter than the pipeline and its second element is
+ * the second step that *finished*, not the second step there is. Zipping the two arrays would
+ * attribute one step's duration to another and would do it most wrongly exactly while somebody is
+ * watching — which is the failure this whole component exists to stop.
+ *
+ * <p>`live` supplies the step in flight, which is in no persisted entry yet for that same reason.
+ *
+ * <p>Where the listing carries neither — an older qits-ci, which dropped both fields — every entry
+ * comes out unstarted and the panel draws a track of empty bubbles showing only what the run is
+ * expected to do. That is the honest reading of an answer that states a shape and no progress, and
+ * it is strictly better than the bar it replaces, which filled against a total it could not place.
  */
-function formatElapsed(millis: number): string {
-  const total = Math.max(0, Math.round(millis / 1000));
-  const seconds = total % 60;
-  const minutes = Math.floor(total / 60) % 60;
-  const hours = Math.floor(total / 3600);
-  if (hours > 0) return `${hours}h ${pad(minutes)}m`;
-  if (minutes > 0) return `${minutes}m ${pad(seconds)}s`;
-  return `${seconds}s`;
-}
-
-/** An ISO instant as epoch milliseconds — `undefined` for absent, empty or unparseable. */
-function instantMs(iso: string | undefined): number | undefined {
-  if (!iso) return undefined;
-  const millis = Date.parse(iso);
-  return Number.isNaN(millis) ? undefined : millis;
-}
-
-/**
- * A run's expected shape as boxes across the track: each step's share of the whole, and how much of
- * that step is done.
- *
- * <p>The boundary is <b>carved out of the step before it</b>, so two steps of 10s and 90s are a 9%
- * box, a 1% seam and a 90% box: the widths and the seams still add to exactly 100, and the last
- * step keeps its whole share because nothing follows it. A step too short to give a whole seam away
- * gives what it has (`Math.min`), which is what keeps a sliver of a step from being drawn at a
- * negative width and pushing the rest of the track off the end.
- *
- * <p>`doneMillis` is measured against the same expectations, so the fill is per step rather than one
- * bar behind the boxes: the seams then stay the panel's own background as the fill crosses them,
- * which is the whole point of drawing the steps at all.
- */
-function buildSteps(expected: readonly number[], doneMillis: number): QitsBuildStep[] {
-  const total = expected.reduce((sum, step) => sum + step, 0);
-  const last = expected.length - 1;
-  let before = 0;
-  return expected.map((step, index) => {
-    const share = (100 * step) / total;
-    const gap = index === last ? 0 : Math.min(QITS_BUILD_STEP_GAP, share);
-    const fill = clamp((doneMillis - before) / step, 0, 1) * 100;
-    before += step;
-    return { width: share - gap, gap, fill };
+function toProgressSteps(run: QitsBuild): readonly QitsStepProgressStep[] | undefined {
+  const expected = run.expectedStepDurationsMillis;
+  if (!expected || expected.length === 0) return undefined;
+  const byIndex = new Map((run.steps ?? []).map((step) => [step.stepIndex, step]));
+  return expected.map((expectedMillis, stepIndex) => {
+    const recorded = byIndex.get(stepIndex);
+    const live = run.live?.stepIndex === stepIndex ? run.live : undefined;
+    return {
+      expectedMillis,
+      // The persisted instant first where there is one: `live` is only ever about the step that
+      // has not been written down yet, and a stale pointer must not reopen a finished step.
+      startedAt: recorded?.startedAt ?? live?.startedAt,
+      finishedAt: recorded?.finishedAt,
+    };
   });
 }
 
@@ -286,7 +254,7 @@ interface QitsNavRow {
 @Component({
   selector: 'qits-main-layout',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, NgTemplateOutlet, QitsPicker, QitsBadge],
+  imports: [RouterOutlet, NgTemplateOutlet, QitsPicker, QitsBadge, QitsStepProgress],
   // The two ways out of an open popover that are not the button itself. Both are on the document
   // because both are about something happening *outside* the panel, and both are cheap: they read
   // one signal and stop while it is closed, which is nearly always.
@@ -400,23 +368,14 @@ interface QitsNavRow {
                           <span class="qits-layout-build-config">{{ run.config }}</span>
                           @if (run.steps; as steps) {
                             <span class="qits-layout-build-duration">
-                              <!-- The shape is the number's picture, and the number is beside it:
-                                   nothing here is said only in geometry. -->
-                              <span class="qits-layout-build-track" aria-hidden="true">
-                                @for (step of steps; track $index) {
-                                  <span
-                                    class="qits-layout-build-step"
-                                    [style.width.%]="step.width"
-                                    [style.margin-right.%]="step.gap"
-                                  >
-                                    <span
-                                      class="qits-layout-build-step-fill"
-                                      [class.qits-layout-build-step-overdue]="run.overdue"
-                                      [style.width.%]="step.fill"
-                                    ></span>
-                                  </span>
-                                }
-                              </span>
+                              <!-- The per-step track, which owns its own arithmetic and its own
+                                   clock. The number beside it is a different fact — what the run
+                                   as a whole has taken — and stays the layout's own. -->
+                              <qits-step-progress
+                                class="qits-layout-build-track"
+                                [steps]="steps"
+                                [label]="run.repoName + ' build progress'"
+                              />
                               @if (run.elapsed) {
                                 <span class="qits-layout-build-elapsed">{{ run.elapsed }}</span>
                               }
@@ -750,46 +709,22 @@ interface QitsNavRow {
       text-align: right;
     }
 
-    /* The expected shape of the run, across the whole row: the track is the prediction and the
-       number beside it is what the run has actually taken, so the two can be read against each
-       other without either being the only statement. Full width because a bar as wide as one cell
-       of a two-column grid would be a decoration rather than a measure. */
+    /* The shape of the run, across the whole row: the track is per step and says where the run has
+       got to, the number beside it is what the run as a whole has taken, so the two can be read
+       against each other without either being the only statement. Full width because a bar as wide
+       as one cell of a two-column grid would be a decoration rather than a measure. */
     .qits-layout-build-duration {
       grid-column: 1 / -1;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 8px;
       margin-top: 2px;
     }
+    /* Everything inside the track — the bubbles, the seams, the per-step numbers — belongs to
+       QitsStepProgress and is styled there. All the layout says is how much room it gets. */
     .qits-layout-build-track {
       flex: 1;
       min-width: 0;
-      display: flex;
-      height: 4px;
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    /* A step is a box of the track it is expected to take; the seam after it is that box's own
-       margin, so the boxes and the seams add to exactly the track and nothing has to be rounded
-       away. The unfilled tone is the panel's border grey — this is a measure, not a control. */
-    .qits-layout-build-step {
-      display: block;
-      flex: none;
-      height: 100%;
-      background: #e5e7eb;
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    .qits-layout-build-step-fill {
-      display: block;
-      height: 100%;
-      background: #1d4ed8;
-      border-radius: 2px;
-    }
-    /* Past its prediction and still going. A quieter tone rather than an alarming one: a slow run
-       is not a failing one, and the bar being full is already the loud part. */
-    .qits-layout-build-step-overdue {
-      background: #93a3c8;
     }
     .qits-layout-build-elapsed {
       flex: none;
@@ -1219,10 +1154,6 @@ export class QitsMainLayout {
       // A run under way is timed from the moment a worker took it; one that is not is still
       // waiting, and how long it has been waiting is what a reader wants of it.
       const since = running ? (startedAt ?? createdAt) : createdAt;
-      const expected = run.expectedStepDurationsMillis;
-      const total = expected?.reduce((sum, step) => sum + step, 0) ?? 0;
-      // Only a running run has got anywhere: a queued one shows the shape of what it will do, empty.
-      const taken = running && startedAt !== undefined ? Math.max(0, now - startedAt) : 0;
       return {
         id: run.id,
         repoName: run.repoName,
@@ -1231,10 +1162,9 @@ export class QitsMainLayout {
         config: buildConfigName(run.configPath),
         running,
         href: this.appLinks.href('qits-ci', `runs/${run.id}`, scope),
-        // Past the prediction the bar stays full rather than overflowing: the run is late, which is
-        // a different fact from the bar being wrong, and the number beside it keeps counting.
-        steps: expected && total > 0 ? buildSteps(expected, Math.min(taken, total)) : undefined,
-        overdue: total > 0 && taken > total,
+        // The track's own arithmetic, and its own clock, live in QitsStepProgress. What is decided
+        // here is only which real instant belongs to which predicted step.
+        steps: toProgressSteps(run),
         elapsed: since === undefined ? '' : formatElapsed(now - since),
       };
     });
