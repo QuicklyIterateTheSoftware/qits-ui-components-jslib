@@ -95,9 +95,11 @@ Every service on this platform is its own host, and every SPA under it shares on
 
 The middle segment is the repository's **component** — the technical unit `qits-ci`, which its
 service, its frontend and its daemon all belong to. A repository the platform has not given one
-keeps spelling its archetype category there; the six are `services daemons libs frontends cli
-images`. Both forms resolve, and `QitsScope` carries the segment as `group` either way, with
-`category` set as well where it spells one of the six.
+keeps spelling its archetype category there; the seven are `services daemons libs apps frontends
+cli images`. Both forms resolve, and `QitsScope` carries the segment as `group` either way, with
+`category` set as well where it spells one of the seven. `apps` and `frontends` are neighbours and
+are not the same thing: an **app** is a standalone web application — its own server, its own image,
+its own deployment — where a **frontend** is a microfrontend a service carries inside its image.
 
 ```ts
 parseScope('/qits/services/qits-ci-service/runs/1'); // { project, group: 'services', category: 'services', repository: 'qits-ci-service' }
@@ -107,7 +109,7 @@ parseScope('/qits/qits-ci/qits-ci-service', knownSlugs, knownComponents);
 //                                                  { project: 'qits', group: 'qits-ci', repository: 'qits-ci-service' }
 ```
 
-**Nothing is a project or a group until the URL proves it.** The six categories are compiled in, so
+**Nothing is a project or a group until the URL proves it.** The seven categories are compiled in, so
 the archetype form reads before any list has answered. Everything else takes a list: `knownSlugs` —
 the project list the chrome loaded — proves segment one, and `knownComponents` — the components of
 that project's repositories — proves segment two, because component names are an **open** set only
@@ -192,7 +194,8 @@ so there is no request to flush and no pending task to wait on.
 project cancels a read still in flight. Each row carries its `component` where qits-projects records
 one — that is what the sidebar groups by and what the address spells — and its archetype, mapped
 through a table copied here rather than imported: `SERVICE`→`services`, `DAEMON`→`daemons`,
-`LIBRARY`→`libs`, `FRONTEND`→`frontends`, `CLI`→`cli`, `IMAGE`→`images`. This library depends on no
+`LIBRARY`→`libs`, `APP`→`apps`, `FRONTEND`→`frontends`, `CLI`→`cli`, `IMAGE`→`images`. This library
+depends on no
 qits module, so an archetype it does not know maps to nothing, and a repository with **neither** a
 component nor a known archetype is left out of the groups rather than filed under a guess.
 `provideQitsProjectList([…])` and `provideQitsRepositoryList([…], wrapperId)` are the literal forms.
@@ -270,7 +273,8 @@ The sidebar, top to bottom, is what the three reads make possible:
   setup" and the `project.detail` entries under it;
 - **one group per component that has repositories** — `qits-ci`, `qits-projects` — in name order,
   and after them the archetype categories that still hold something — SERVICES, DAEMONS, LIBS,
-  FRONTENDS, CLI, IMAGES, in that order. One row per repository, ordered by name and blind to case,
+  APPS, FRONTENDS, CLI, IMAGES, in that order. One row per repository, ordered by name and blind to
+  case,
   and under the repository **in scope** the `<category>.details` entries of that repository's own
   archetype: the slots say which _kinds_ of repository an application has something to say about,
   which is a different question from which component it is part of. Only the repository in scope

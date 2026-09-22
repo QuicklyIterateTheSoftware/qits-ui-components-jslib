@@ -11,6 +11,7 @@ import {
   provideQitsNavigation,
   provideQitsNavigationLinks,
   provideQitsNavigationTree,
+  QITS_NAV_SLOTS,
   QITS_NAVIGATION,
   QITS_NAVIGATION_URL,
   toNavTree,
@@ -18,7 +19,51 @@ import {
   type QitsNavigationSource,
 } from './navigation';
 
+describe('QITS_NAV_SLOTS', () => {
+  /**
+   * The same sequence as the edge's `EdgeRoutes.SLOTS` and the deployer's
+   * `DeploymentSpecParser.SLOTS`. Written out rather than derived: a literal is what catches a slot
+   * added here and nowhere else, or added in the wrong place.
+   */
+  it('spells the edge’s vocabulary, in the edge’s order', () => {
+    expect(QITS_NAV_SLOTS).toEqual([
+      'services.details',
+      'daemons.details',
+      'libs.details',
+      'apps.details',
+      'frontends.details',
+      'cli.details',
+      'images.details',
+      'project.detail',
+      'platform',
+      'system',
+    ]);
+  });
+});
+
 describe('toNavTree', () => {
+  /** The seventh archetype slot flattens like the other six — nothing about it is special. */
+  it('carries the entries of an apps.details slot', () => {
+    const tree = toNavTree({
+      origin: 'https://dev.example.com',
+      slots: {
+        'apps.details': [
+          {
+            app: 'qits-ci',
+            label: 'CI',
+            host: 'ci',
+            path: '/ci',
+            origin: 'https://ci.dev.example.com',
+            position: 2,
+          },
+        ],
+      },
+    });
+    expect(tree.entries.map((entry) => [entry.slot, entry.label])).toEqual([
+      ['apps.details', 'CI'],
+    ]);
+  });
+
   it('flattens every slot, tags each entry with it, and sorts by position then label', () => {
     const tree = toNavTree({
       environment: 'dev',

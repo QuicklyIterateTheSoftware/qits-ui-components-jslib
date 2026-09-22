@@ -66,24 +66,28 @@ describe('provideQitsRepositories', () => {
           { repository: { id: 'r1', name: 'qits-ci', archetype: 'SERVICE' } },
           { repository: { id: 'r2', name: 'qits-agent', archetype: 'DAEMON' } },
           { repository: { id: 'r3', name: 'qits-eventstream', archetype: 'LIBRARY' } },
-          { repository: { id: 'r4', name: 'qits-spa-home', archetype: 'FRONTEND' } },
-          { repository: { id: 'r5', name: 'qits-cli-bootstrap', archetype: 'CLI' } },
-          { repository: { id: 'r6', name: 'node-base', archetype: 'IMAGE' } },
-          { repository: { id: 'r7', name: 'qits-qits', archetype: 'WRAPPER' } },
+          // An APP is a standalone web application of its own; a FRONTEND is a microfrontend a
+          // service carries inside its image. Two archetypes, two groups, side by side.
+          { repository: { id: 'r4', name: 'qits-home-app', archetype: 'APP' } },
+          { repository: { id: 'r5', name: 'qits-spa-home', archetype: 'FRONTEND' } },
+          { repository: { id: 'r6', name: 'qits-cli-bootstrap', archetype: 'CLI' } },
+          { repository: { id: 'r7', name: 'node-base', archetype: 'IMAGE' } },
+          { repository: { id: 'r8', name: 'qits-qits', archetype: 'WRAPPER' } },
         ],
-        wrapper: { repositoryId: 'r7', branch: 'main', entries: [] },
+        wrapper: { repositoryId: 'r8', branch: 'main', entries: [] },
       });
 
     expect(repositories.repositories()?.map((entry) => entry.category)).toEqual([
       'services',
       'daemons',
       'libs',
+      'apps',
       'frontends',
       'cli',
       'images',
       undefined,
     ]);
-    expect(repositories.wrapperRepositoryId()).toBe('r7');
+    expect(repositories.wrapperRepositoryId()).toBe('r8');
     expect(repositories.failed()).toBe(false);
   });
 

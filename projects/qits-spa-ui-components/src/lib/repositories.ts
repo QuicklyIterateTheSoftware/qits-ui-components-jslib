@@ -37,6 +37,7 @@ const CATEGORY_OF: Readonly<Record<string, QitsCategory>> = {
   SERVICE: 'services',
   DAEMON: 'daemons',
   LIBRARY: 'libs',
+  APP: 'apps',
   FRONTEND: 'frontends',
   CLI: 'cli',
   IMAGE: 'images',

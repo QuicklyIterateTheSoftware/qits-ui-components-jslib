@@ -293,6 +293,26 @@ describe('QitsMainLayout', () => {
             position: 1,
           },
         ],
+        // The seventh archetype slot: what an application has to say about a standalone web
+        // application — its own server, its own image, its own deployment.
+        'apps.details': [
+          {
+            app: 'qits-ci',
+            label: 'CI',
+            host: 'ci',
+            path: '/ci',
+            origin: CI_ORIGIN,
+            position: 2,
+          },
+          {
+            app: 'qits-docs',
+            label: 'Docs',
+            host: 'docs',
+            path: '/docs',
+            origin: 'https://docs.dev.example.com',
+            position: 1,
+          },
+        ],
       },
     };
 
@@ -612,6 +632,101 @@ describe('QitsMainLayout', () => {
             ['Project setup', 'Workspaces'].includes(a.textContent?.trim() ?? ''),
           ),
         );
+      });
+    });
+
+    /**
+     * The seventh archetype group. An `-app` is a standalone web application — its own server, its
+     * own image, its own deployment — where a `-frontend` is a microfrontend a service carries
+     * inside its image, so the two are separate groups and the rows do not mix.
+     */
+    describe('the apps group', () => {
+      const ARCHETYPED: readonly QitsRepository[] = [
+        { id: 'r1', name: 'qits-ci-service', category: 'services' },
+        { id: 'r2', name: 'qits-ci-daemon', category: 'daemons' },
+        { id: 'r3', name: 'qits-eventstream-javalib', category: 'libs' },
+        { id: 'r4', name: 'qits-home-app', category: 'apps' },
+        { id: 'r5', name: 'qits-ci-frontend', category: 'frontends' },
+        { id: 'r6', name: 'qits-cli-bootstrap', category: 'cli' },
+        { id: 'r7', name: 'node-base', category: 'images' },
+      ];
+
+      it('draws APPS between LIBS and FRONTENDS, with its repository under it', async () => {
+        const fixture = await renderTree({ url: '/qits/', repositories: ARCHETYPED });
+
+        expect(headings(fixture)).toEqual([
+          'SERVICES',
+          'DAEMONS',
+          'LIBS',
+          'APPS',
+          'FRONTENDS',
+          'CLI',
+          'IMAGES',
+          'PLATFORM',
+          'SYSTEM',
+        ]);
+        expect(labels(fixture)).toEqual([
+          'Project',
+          'Project setup',
+          'Workspaces',
+          'qits-ci-service',
+          'qits-ci-daemon',
+          'qits-eventstream-javalib',
+          'qits-home-app',
+          'qits-ci-frontend',
+          'qits-cli-bootstrap',
+          'node-base',
+          'Events',
+          'Overview',
+          'System',
+        ]);
+      });
+
+      it('addresses an app row at the apps segment', async () => {
+        const fixture = await renderTree({ url: '/qits/', repositories: ARCHETYPED });
+        expect(
+          links(fixture)
+            .find((a) => a.textContent?.trim() === 'qits-home-app')
+            ?.getAttribute('href'),
+        ).toBe(`${PROJECTS_ORIGIN}/qits/apps/qits-home-app/`);
+      });
+
+      /** The children are the `apps.details` entries, and they hang off the app in scope alone. */
+      it('hangs the apps.details entries under the app in scope', async () => {
+        const fixture = await renderTree({
+          url: '/qits/apps/qits-home-app/',
+          repositories: ARCHETYPED,
+        });
+
+        expect(current(fixture)).toEqual(['qits-home-app']);
+        const children = links(fixture).filter((a) =>
+          a.classList.contains('qits-layout-link-child'),
+        );
+        expect(children.map((a) => a.textContent?.trim())).toEqual([
+          'Project setup',
+          'Workspaces',
+          // Position order inside the slot: Docs at 1, CI at 2.
+          'Docs',
+          'CI',
+        ]);
+        expect(children.find((a) => a.textContent?.trim() === 'CI')?.getAttribute('href')).toBe(
+          `${CI_ORIGIN}/qits/apps/qits-home-app/`,
+        );
+      });
+
+      /** Neighbours, not synonyms: a frontend row never picks up the app slot's entries. */
+      it('leaves a frontend row with its own slot, not the apps one', async () => {
+        const fixture = await renderTree({
+          url: '/qits/frontends/qits-ci-frontend/',
+          repositories: ARCHETYPED,
+        });
+
+        expect(current(fixture)).toEqual(['qits-ci-frontend']);
+        const children = links(fixture).filter((a) =>
+          a.classList.contains('qits-layout-link-child'),
+        );
+        // `frontends.details` is empty in this fixture, so only the Project node's children remain.
+        expect(children.map((a) => a.textContent?.trim())).toEqual(['Project setup', 'Workspaces']);
       });
     });
 

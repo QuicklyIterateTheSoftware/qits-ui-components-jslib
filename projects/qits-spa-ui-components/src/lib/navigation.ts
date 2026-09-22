@@ -19,6 +19,7 @@ export type QitsNavSlot =
   | 'services.details'
   | 'daemons.details'
   | 'libs.details'
+  | 'apps.details'
   | 'frontends.details'
   | 'cli.details'
   | 'images.details'
@@ -26,11 +27,17 @@ export type QitsNavSlot =
   | 'platform'
   | 'system';
 
-/** Every slot, in no particular order — the sidebar decides where each one is drawn. */
+/**
+ * Every slot, in the edge's own order — `EdgeRoutes.SLOTS` and the deployer's
+ * `DeploymentSpecParser.SLOTS` spell the same sequence. Nothing here depends on it, because the
+ * sidebar decides where each slot is drawn and `toNavTree` re-sorts by position; it is kept in step
+ * so that the one vocabulary reads the same wherever somebody opens it.
+ */
 export const QITS_NAV_SLOTS: readonly QitsNavSlot[] = [
   'services.details',
   'daemons.details',
   'libs.details',
+  'apps.details',
   'frontends.details',
   'cli.details',
   'images.details',

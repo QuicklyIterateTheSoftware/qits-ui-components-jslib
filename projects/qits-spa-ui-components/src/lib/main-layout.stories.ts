@@ -143,6 +143,19 @@ const DEMO_NAVIGATION: QitsNavigation = {
       },
       { app: 'qits-ci', label: 'CI', host: 'ci', path: '/ci', origin: CI_ORIGIN, position: 2 },
     ],
+    // A standalone web application — its own server, its own image, its own deployment — as
+    // opposed to a microfrontend a service carries inside its image.
+    'apps.details': [
+      { app: 'qits-ci', label: 'CI', host: 'ci', path: '/ci', origin: CI_ORIGIN, position: 2 },
+      {
+        app: 'qits-workspaces',
+        label: 'Workspaces',
+        host: 'workspaces',
+        path: '/workspaces',
+        origin: 'https://workspaces.dev.example.com',
+        position: 5,
+      },
+    ],
   },
 };
 
@@ -161,13 +174,15 @@ const DEMO_PROJECTS: readonly QitsProject[] = [
   { id: 'p3', slug: 'platform-infra', name: 'Platform infrastructure' },
 ];
 
-/** A half-migrated platform: three repositories filed under a component, two only archetyped. */
+/** A half-migrated platform: three repositories filed under a component, three only archetyped. */
 const DEMO_REPOSITORIES: readonly QitsRepository[] = [
   { id: 'r1', name: 'qits-ci-service', component: 'qits-ci', category: 'services' },
   { id: 'r2', name: 'qits-ci-frontend', component: 'qits-ci', category: 'frontends' },
   { id: 'r3', name: 'qits-projects-service', component: 'qits-projects', category: 'services' },
   { id: 'r4', name: 'qits-workspaces', category: 'services' },
   { id: 'r5', name: 'qits-eventstream', category: 'libs' },
+  // An app, not a frontend: it is deployed on its own rather than carried inside a service.
+  { id: 'r6', name: 'qits-home-app', category: 'apps' },
 ];
 
 /** An instant `seconds` ago — so the workbench's runs are as old as the page is, not as old as it. */

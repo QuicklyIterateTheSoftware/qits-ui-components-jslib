@@ -16,14 +16,22 @@ import { QitsAppLinks } from './app-links';
 import { QITS_PROJECTS } from './projects';
 import { QITS_REPOSITORIES } from './repositories';
 
-/** The six kinds of repository a project holds. The set is closed and the same in every SPA. */
-export type QitsCategory = 'services' | 'daemons' | 'libs' | 'frontends' | 'cli' | 'images';
+/**
+ * The seven kinds of repository a project holds. The set is closed and the same in every SPA.
+ *
+ * `apps` and `frontends` are neighbours and are not the same thing: an app is a standalone web
+ * application with its own server, its own image and its own deployment, where a frontend is a
+ * microfrontend a service carries inside its image.
+ */
+export type QitsCategory =
+  'services' | 'daemons' | 'libs' | 'apps' | 'frontends' | 'cli' | 'images';
 
-/** Every category, in the order the sidebar draws its groups. */
+/** Every category, in the order the sidebar draws its groups — the edge's slot order. */
 export const QITS_CATEGORIES: readonly QitsCategory[] = [
   'services',
   'daemons',
   'libs',
+  'apps',
   'frontends',
   'cli',
   'images',
@@ -47,7 +55,7 @@ export interface QitsScope {
    */
   readonly group?: string;
   /**
-   * The legacy archetype form of {@link group}, set only where the segment spells one of the six.
+   * The legacy archetype form of {@link group}, set only where the segment spells one of the seven.
    * Kept so a caller written before components — a route guard, a link built from a literal — reads
    * and writes the same field it always did.
    */
@@ -77,7 +85,7 @@ export function scopeGroup(scope: QitsScope | undefined): string | undefined {
  * lists prove it:
  *
  * <ul>
- *   <li>the six categories are compiled in, so `/qits/services/qits-ci/runs/1` reads on its own,
+ *   <li>the seven categories are compiled in, so `/qits/services/qits-ci/runs/1` reads on its own,
  *       before any list has answered;
  *   <li>`knownSlugs` — the project list the chrome already loaded — proves the first segment;
  *   <li>`knownComponents` — the components of the scoped project's repositories — proves the

@@ -194,8 +194,8 @@ interface QitsNavRow {
  * 1. **The service declares its placements** in `.config/qits/deployments.yml`:
  *    `navigation-entries: services.details.CI:2, libs.details.CI:2, ...` — a comma list of
  *    `<slot>.<Label>:<position>`, at most one entry per slot. Slots are a closed vocabulary:
- *    `services.details` `daemons.details` `libs.details` `frontends.details` `cli.details`
- *    `images.details` (children of every repository of that category), `project.detail`
+ *    `services.details` `daemons.details` `libs.details` `apps.details` `frontends.details`
+ *    `cli.details` `images.details` (children of every repository of that category), `project.detail`
  *    (children of the Project row), `platform` (the PLATFORM group, project scoped) and
  *    `system` (the SYSTEM group, global). Its host label is `host:` or, by default, the
  *    application name minus `qits-platform-`/`qits-` (`qits-ci` → `ci`). The old
@@ -243,7 +243,7 @@ interface QitsNavRow {
  *   `navigation.ts` and the row builder in `sidebar()` here — and release deployer, edge and
  *   this library in that order.
  * - **A new sidebar group**: it is a component, so it appears the moment qits-projects records one
- *   on a repository row — nothing to release here. The six archetype categories are the legacy
+ *   on a repository row — nothing to release here. The seven archetype categories are the legacy
  *   grouping and a closed set: changing them means `RepositoryArchetype` in qits-projects and
  *   `QITS_CATEGORIES` in `scope.ts` (also used by every SPA's route guard).
  * - **Rows the platform does not announce** (Project, Project setup, the headings) are the
@@ -1296,7 +1296,7 @@ export class QitsMainLayout {
    * applications that have something to say about it.
    *
    * A repository the platform gives no component draws under its archetype category instead, so a
-   * platform whose wrapper is not reorganised yet renders exactly the six groups it always did, a
+   * platform whose wrapper is not reorganised yet renders exactly the seven groups it always did, a
    * reorganised one renders components alone, and a half-migrated one renders both.
    *
    * The children hang off the repository in scope alone. A tree that opened every repository would
@@ -1425,7 +1425,7 @@ interface QitsRepositoryGroup {
  *
  * <p>Components lead because they are what the platform now says a repository belongs to, and they
  * are sorted by name because nothing else about an open set of names is predictable to a reader.
- * The categories keep the order they have always been drawn in — services, daemons, libs,
+ * The categories keep the order they have always been drawn in — services, daemons, libs, apps,
  * frontends, cli, images — and sit below as what is left of the archetype layout: on a platform
  * that has finished migrating there are none, and on one that has not started there are only these.
  *
