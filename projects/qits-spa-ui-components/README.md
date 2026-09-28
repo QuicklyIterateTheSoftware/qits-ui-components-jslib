@@ -11,7 +11,7 @@ already there — nothing new to install.
 The package is served from the platform's own npm repository, not npmjs — route the scope in an
 `.npmrc` beside your `package.json`:
 
-    registry=http://localhost:8082/artifacts/npm/npmjs/     # everything, through the npmjs cache
+    registry=http://localhost:8082/npm/npmjs/     # everything, through the npmjs cache
     @qits:registry=http://localhost:8081/artifacts/npm/npm/ # ours
 
     pnpm add @qits/ui-components
