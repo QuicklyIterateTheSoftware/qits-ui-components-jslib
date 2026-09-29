@@ -1,4 +1,4 @@
-import { NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet, PlatformLocation } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -940,11 +940,12 @@ export class QitsMainLayout {
   protected readonly hasBuilds = this.builds !== null;
 
   /**
-   * Which link is *this* application in the flat shape. Read once from the document's base URI
+   * Which link is *this* application in the flat shape. Read once from the document's `<base href>`
    * rather than from the router, because the thing being matched is the app's own mount point, not
-   * its current route — and because a base URI exists on a server too.
+   * its current route. Read through `PlatformLocation`, not `document.baseURI`: the server DOM
+   * does not implement `baseURI` and throws, which failed every server render of the layout.
    */
-  private readonly basePath = toDirectoryPath(this.doc.baseURI ?? '/');
+  private readonly basePath = toDirectoryPath(inject(PlatformLocation).getBaseHrefFromDOM() ?? '/');
 
   protected readonly navOpen = signal(false);
 

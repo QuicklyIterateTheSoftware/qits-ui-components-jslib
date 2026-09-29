@@ -1,4 +1,4 @@
-import { provideLocationMocks } from '@angular/common/testing';
+import { MOCK_PLATFORM_LOCATION_CONFIG, provideLocationMocks } from '@angular/common/testing';
 import {
   Component,
   signal,
@@ -91,6 +91,15 @@ describe('QitsMainLayout', () => {
       expect(current(fixture)).toEqual(['Home']);
       expect(links(fixture)[0].classList).toContain('qits-layout-link-current');
       expect(links(fixture)[1].getAttribute('aria-current')).toBeNull();
+    });
+
+    it('finds the current page from the base href, not from document.baseURI', () => {
+      // The server DOM (domino) throws on `document.baseURI`, so the layout reads the base href
+      // through PlatformLocation. jsdom's baseURI stays `/`, which would mark Home instead.
+      TestBed.configureTestingModule({
+        providers: [{ provide: MOCK_PLATFORM_LOCATION_CONFIG, useValue: { appBaseHref: '/ci/' } }],
+      });
+      expect(current(render())).toEqual(['CI']);
     });
 
     it('lets a non-empty [links] beat the source outright', () => {
