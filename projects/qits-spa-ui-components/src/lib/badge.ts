@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
-export type QitsBadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
+export type QitsBadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'highlight';
 
 /**
  * A short status word — a run's outcome, a deployment's state. The label is required because a
@@ -8,6 +8,9 @@ export type QitsBadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger
  *
  * Tone is a *semantic* input, not a colour: callers say `success`, never `#16a34a`, so restyling
  * the whole system stays a change in this file.
+ *
+ * `highlight` marks a thing singled out as ready/planned — it is the purple of the shared entity
+ * status palette (REFINED); see qits-projects-frontend's `entities-model.ts` `STATUS_TONES`.
  */
 @Component({
   selector: 'qits-badge',
@@ -53,6 +56,11 @@ export type QitsBadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger
       background: #fef2f2;
       color: #b91c1c;
       border-color: #fecaca;
+    }
+    .qits-badge-highlight {
+      background: #f5f3ff;
+      color: #6d28d9;
+      border-color: #ddd6fe;
     }
   `,
 })

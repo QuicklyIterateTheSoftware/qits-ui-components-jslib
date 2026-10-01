@@ -10,7 +10,7 @@ const meta: Meta<QitsBadge> = {
   argTypes: {
     tone: {
       control: 'inline-radio',
-      options: ['neutral', 'info', 'success', 'warning', 'danger'],
+      options: ['neutral', 'info', 'success', 'warning', 'danger', 'highlight'],
     },
   },
 };
@@ -38,6 +38,7 @@ export const EveryTone: Story = {
         <qits-badge label="SUCCESS" tone="success" />
         <qits-badge label="FLAKY" tone="warning" />
         <qits-badge label="FAILED" tone="danger" />
+        <qits-badge label="REFINED" tone="highlight" />
       </div>
     `,
   }),

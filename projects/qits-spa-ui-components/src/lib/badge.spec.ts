@@ -26,7 +26,7 @@ describe('QitsBadge', () => {
 
   it('carries the tone as a class, not as a colour the caller picked', () => {
     const fixture = render('SUCCESS');
-    for (const tone of ['info', 'success', 'warning', 'danger'] as const) {
+    for (const tone of ['info', 'success', 'warning', 'danger', 'highlight'] as const) {
       fixture.componentRef.setInput('tone', tone);
       fixture.detectChanges();
       expect(classes(span(fixture))).toEqual(['qits-badge', `qits-badge-${tone}`]);
