@@ -50,5 +50,3 @@ Thumbs.db
 *storybook.log
 /projects/*/documentation.json
 
-# pnpm store, kept on the checkout's filesystem (see .npmrc)
-/.pnpm-store
