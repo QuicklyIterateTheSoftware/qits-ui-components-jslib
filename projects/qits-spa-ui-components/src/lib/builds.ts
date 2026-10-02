@@ -2,12 +2,15 @@ import { HttpClient } from '@angular/common/http';
 import {
   DestroyRef,
   inject,
+  Injector,
   InjectionToken,
   makeEnvironmentProviders,
   signal,
   type EnvironmentProviders,
   type Signal,
 } from '@angular/core';
+
+import { afterApiOrigin, QitsAppLinks } from './app-links';
 
 /** A build under way. The one status the panel draws differently, because it is the one moving. */
 export const QITS_BUILD_RUNNING = 'RUNNING';
@@ -143,10 +146,11 @@ export interface QitsBuildsSource {
 export const QITS_BUILDS = new InjectionToken<QitsBuildsSource>('QITS_BUILDS');
 
 /**
- * Where the active runs are asked for — a **same-origin path**, like the chrome's other reads and
- * for the same reason: the edge routes `/ci` on every vhost, so the browser's own session reaches
- * qits-ci with no machine token, no CORS pre-flight and no origin compiled in here. An absolute URL
- * would name a host this library cannot know and would need a credential of its own.
+ * Where the active runs are asked for: this path, on **qits-ci's own origin** — the
+ * `applications.qits-ci.origin` the navigation serves (`QitsAppLinks.apiOrigin`). The edge routes
+ * `/ci` on qits-ci's host only, so from any other SPA this is a cross-origin read that waits for the
+ * navigation to say where qits-ci is and carries the session with `withCredentials`. No origin is
+ * compiled in here: only the edge knows it.
  *
  * **This listing is the single source of truth**, and the only one. Everything below is about when
  * to read it again, never about what it says.
@@ -154,9 +158,9 @@ export const QITS_BUILDS = new InjectionToken<QitsBuildsSource>('QITS_BUILDS');
 export const QITS_BUILDS_URL = '/ci/api/runs/active';
 
 /**
- * The live stream that says *something has happened, go and look* — a same-origin bare path for
- * {@link QITS_BUILDS_URL}'s reason: the edge routes `/events` on every vhost exactly as it routes
- * `/ci`, so a browser session reaches qits-events with no token and no CORS pre-flight.
+ * The live stream that says *something has happened, go and look* — this path on **qits-events'
+ * own origin** (`QitsAppLinks.apiOrigin('qits-events')`), for {@link QITS_BUILDS_URL}'s reason, and
+ * opened `withCredentials` so the session reaches it across origins.
  *
  * <p>The three names are the whole run lifecycle. `BuildStatusChanged` fires on every transition of
  * a run's status — queued, started, and each terminal state — so **both edges of the active
@@ -212,7 +216,8 @@ export const QITS_BUILDS_STREAM_ATTEMPTS = 2;
  * — an `EventSource` is opened by the browser and never goes through `HttpClient` — so the seam has
  * to be the constructor itself, and this interface is what both sides of it agree on. Deliberately
  * smaller than the real thing: no `addEventListener`, because the frames this reads are
- * unnamed-event-only, and no `withCredentials`, because the stream is same-origin.
+ * unnamed-event-only, and no `withCredentials` property, because whether the stream carries the
+ * session is the factory's decision when it opens one — and the default factory always does.
  */
 export interface QitsEventSourceLike {
   onopen: ((event: Event) => void) | null;
@@ -232,6 +237,9 @@ export type QitsEventSourceFactory = (url: string) => QitsEventSourceLike;
  * coalesced burst, the fall back to an interval — and none of it is reachable without driving
  * `onopen`, `onmessage` and `onerror` by hand.
  *
+ * <p>The default opens `new EventSource(url, { withCredentials: true })`: the stream lives on
+ * qits-events' own origin, and without the flag a cross-origin `EventSource` carries no cookie.
+ *
  * <p>`null` is a supported answer and the default one off a browser: an SPA rendered on a server
  * has no `EventSource` constructor, and a source that threw there would take the whole chrome down
  * over a header affordance. With no factory the count is kept current by the fallback interval,
@@ -244,7 +252,7 @@ export const QITS_EVENT_SOURCE = new InjectionToken<QitsEventSourceFactory | nul
     factory: () =>
       typeof EventSource === 'undefined'
         ? null
-        : (url: string) => new EventSource(url) as QitsEventSourceLike,
+        : (url: string) => new EventSource(url, { withCredentials: true }) as QitsEventSourceLike,
   },
 );
 
@@ -379,20 +387,48 @@ class HttpBuildsSource implements QitsBuildsSource {
   private failures = 0;
   private watching = false;
   private stopped = false;
+  /** Where the listing and the stream are — `undefined` until the navigation has said. */
+  private url: string | undefined = undefined;
+  private streamUrl: string | undefined = undefined;
+  private waiting: (() => void) | undefined = undefined;
 
+  /**
+   * `url` and `streamUrl` given are used exactly as given; each one left unsaid waits for its
+   * application's origin — qits-ci for the listing, qits-events for the stream — and nothing at all
+   * is read, opened or timed before both are known.
+   */
   constructor(
-    private readonly url: string,
+    url: string | undefined,
     private readonly intervalMs: number,
     private readonly fallbackIntervalMs: number,
-    private readonly streamUrl: string,
+    streamUrl: string | undefined,
     private readonly openStream: QitsEventSourceFactory | null,
   ) {
     inject(DestroyRef).onDestroy(() => this.stop());
-    // The listing first and the stream second, in that order and both at once: the read is what
-    // makes the bolt true now, the stream is what keeps it true, and neither waits for the other.
-    this.read();
-    this.connect();
-    this.cadence();
+    const start = (listing: string, stream: string) => {
+      this.waiting = undefined;
+      if (this.stopped) return;
+      this.url = listing;
+      this.streamUrl = stream;
+      // The listing first and the stream second, in that order and both at once: the read is what
+      // makes the bolt true now, the stream is what keeps it true, and neither waits for the other.
+      this.read();
+      this.connect();
+      this.cadence();
+    };
+    if (url !== undefined && streamUrl !== undefined) {
+      start(url, streamUrl);
+      return;
+    }
+    const links = inject(QitsAppLinks);
+    const injector = inject(Injector);
+    // Both origins come out of the one navigation answer, so waiting for one is waiting for both.
+    this.waiting = afterApiOrigin(links, 'qits-ci', injector, () =>
+      start(
+        url ?? links.apiUrl('qits-ci', QITS_BUILDS_URL) ?? QITS_BUILDS_URL,
+        streamUrl ?? links.apiUrl('qits-events', QITS_BUILDS_STREAM_URL) ?? QITS_BUILDS_STREAM_URL,
+      ),
+    );
   }
 
   watch(watching: boolean): void {
@@ -415,7 +451,7 @@ class HttpBuildsSource implements QitsBuildsSource {
    * an attempt rather than the stream.
    */
   private connect(): void {
-    if (this.stopped || this.stream || !this.openStream) return;
+    if (this.stopped || this.stream || !this.openStream || this.streamUrl === undefined) return;
     if (this.failures >= QITS_BUILDS_STREAM_ATTEMPTS) return;
     const stream = this.openStream(this.streamUrl);
     this.stream = stream;
@@ -460,6 +496,8 @@ class HttpBuildsSource implements QitsBuildsSource {
    * rate, and a restarted interval is a tick that never comes.
    */
   private cadence(): void {
+    // Not started yet: nowhere to read, so no timer either. Starting calls this again.
+    if (this.url === undefined) return;
     const period = this.watching
       ? this.intervalMs
       : this.stream
@@ -476,6 +514,8 @@ class HttpBuildsSource implements QitsBuildsSource {
   /** The application is going away: every timer, the stream and a read in flight, all of them. */
   private stop(): void {
     this.stopped = true;
+    this.waiting?.();
+    this.waiting = undefined;
     clearInterval(this.timer);
     clearTimeout(this.coalescing);
     this.timer = undefined;
@@ -492,20 +532,23 @@ class HttpBuildsSource implements QitsBuildsSource {
    * tick comes is dropped, because its answer is already the older of the two.
    */
   private read(): void {
+    if (this.url === undefined) return;
     this.cancel?.();
-    const subscription = this.http.get<QitsBuildRuns>(this.url).subscribe({
-      next: (body) => {
-        this.answered.set(toBuilds(body));
-        this.gaveUp.set(false);
-      },
-      // A listing that could not be fetched is not a failed application. The bolt draws itself as
-      // unanswered, the panel says one quiet line, and every page around it renders exactly as it
-      // did — which is the whole point on a host where `/ci` is not routed at all.
-      error: () => {
-        this.answered.set([]);
-        this.gaveUp.set(true);
-      },
-    });
+    const subscription = this.http
+      .get<QitsBuildRuns>(this.url, { withCredentials: true })
+      .subscribe({
+        next: (body) => {
+          this.answered.set(toBuilds(body));
+          this.gaveUp.set(false);
+        },
+        // A listing that could not be fetched is not a failed application. The bolt draws itself as
+        // unanswered, the panel says one quiet line, and every page around it renders exactly as it
+        // did — which is the whole point on a host where `/ci` is not routed at all.
+        error: () => {
+          this.answered.set([]);
+          this.gaveUp.set(true);
+        },
+      });
     this.cancel = () => subscription.unsubscribe();
   }
 }
@@ -519,8 +562,10 @@ class HttpBuildsSource implements QitsBuildsSource {
  * page, and draws a bolt that says out loud that it does not know.
  *
  * Providing it is what puts the bolt there: an application that provides nothing has no bolt, in the
- * same way it has no picker. Pass `url` to point at something other than `/ci/api/runs/active` — a
- * fixture, a dev proxy prefix — `intervalMs` to poll at another rate while the panel is open,
+ * same way it has no picker. The listing goes to qits-ci's own origin and the stream to qits-events'
+ * once `provideQitsNavigation()` has said where those are; nothing goes out before. Pass `url` to
+ * point at something other than `/ci/api/runs/active` there — a fixture, a dev proxy prefix, used
+ * exactly as given — `intervalMs` to poll at another rate while the panel is open,
  * `fallbackIntervalMs` for the closed-panel rate where there is no stream, and `streamUrl` to
  * subscribe somewhere else.
  *
@@ -536,10 +581,10 @@ export function provideQitsBuilds(options?: {
   readonly streamUrl?: string;
   readonly eventSource?: QitsEventSourceFactory | null;
 }): EnvironmentProviders {
-  const url = options?.url ?? QITS_BUILDS_URL;
+  const url = options?.url;
   const intervalMs = options?.intervalMs ?? QITS_BUILDS_INTERVAL_MS;
   const fallbackIntervalMs = options?.fallbackIntervalMs ?? QITS_BUILDS_FALLBACK_INTERVAL_MS;
-  const streamUrl = options?.streamUrl ?? QITS_BUILDS_STREAM_URL;
+  const streamUrl = options?.streamUrl;
   return makeEnvironmentProviders([
     {
       provide: QITS_BUILDS,

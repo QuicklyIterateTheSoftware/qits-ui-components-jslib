@@ -1,4 +1,12 @@
-import { DOCUMENT, inject, Injectable, InjectionToken } from '@angular/core';
+import {
+  DOCUMENT,
+  effect,
+  inject,
+  Injectable,
+  InjectionToken,
+  Injector,
+  untracked,
+} from '@angular/core';
 import { Router } from '@angular/router';
 
 import { QITS_NAVIGATION, type QitsNavEntry, type QitsNavSlot } from './navigation';
@@ -49,16 +57,74 @@ export class QitsAppLinks {
    * asked before the document because it is the address the reader actually navigated to.
    */
   private readonly router = inject(Router, { optional: true });
+  private readonly injector = inject(Injector);
 
   /** The first entry for an application — one application may appear in several slots. */
   private entry(app: string): QitsNavEntry | undefined {
     return this.source?.tree()?.entries.find((entry) => entry.app === app);
   }
 
-  /** Where an application is served on a host of its own, or `undefined` while it has none. */
+  /**
+   * Where an application is served on a host of its own, or `undefined` while it has none. The
+   * platform's `applications.<app>.origin` wins where it was served — it is the edge's statement
+   * of where the application answers — and the origin of a hosted entry is the older answer.
+   */
   origin(app: string): string | undefined {
+    const declared = this.source?.tree()?.origins?.[app];
+    if (declared) return declared;
     const entry = this.entry(app);
     return entry?.host ? entry.origin : undefined;
+  }
+
+  /**
+   * The origin to prefix an API path of another application with — `https://projects.example` for
+   * `/projects/api/projects` — read from `applications.<app>.origin` of the navigation.
+   *
+   * Three answers, and a caller treats each differently:
+   *
+   * - `undefined`: the navigation has not answered yet. **Wait**, rather than firing at `''` — a
+   *   relative call made now goes to this SPA's own host, which no longer routes another
+   *   application's paths. Reading this inside a `computed`/`effect` re-runs when the answer
+   *   lands; outside one, use {@link whenApiOrigin}.
+   * - an origin: the application's own, no trailing slash. The call is cross-origin and has to
+   *   carry the session itself — `credentials: 'include'` / `withCredentials: true`.
+   * - `''`: the navigation answered (or gave up) and named no origin for this application, or there
+   *   is no navigation provided at all. The path is used as it is, same-origin — exactly the call
+   *   every SPA made before the field existed, which keeps an edge that does not serve it working.
+   *
+   * Deliberately **not** the hosted entry's origin as a fallback: an edge too old to serve this
+   * field is also too old to answer the cross-origin request such a call would be.
+   */
+  apiOrigin(app: string): string | undefined {
+    if (!this.source) return '';
+    const tree = this.source.tree();
+    if (!tree) return undefined;
+    return tree.origins?.[app] ?? '';
+  }
+
+  /**
+   * {@link apiOrigin} joined to `path` — `https://projects.example/projects/api/projects`, the bare
+   * `/projects/api/projects` where no origin was declared, and `undefined` while the navigation has
+   * not answered.
+   */
+  apiUrl(app: string, path: string): string | undefined {
+    const origin = this.apiOrigin(app);
+    return origin === undefined ? undefined : origin ? join(origin, path) : path;
+  }
+
+  /**
+   * {@link apiOrigin} once it is known: resolves immediately when the navigation has answered, and
+   * the moment it does otherwise. Never rejects — a navigation that fails resolves with `''`.
+   */
+  whenApiOrigin(app: string): Promise<string> {
+    return new Promise((resolve) => afterApiOrigin(this, app, this.injector, resolve));
+  }
+
+  /** {@link apiUrl} once it is known, on {@link whenApiOrigin}'s terms. */
+  whenApiUrl(app: string, path: string): Promise<string> {
+    return new Promise((resolve) =>
+      afterApiOrigin(this, app, this.injector, () => resolve(this.apiUrl(app, path) ?? path)),
+    );
   }
 
   /** Where the environment itself is served — the origin of a clone URL, and of a legacy link. */
@@ -77,8 +143,9 @@ export class QitsAppLinks {
    * alike: the application publishes no document, or the platform has not answered yet.
    *
    * The application's own host on purpose: the path is one of its own routes, and its own host is
-   * what serves those. An application with no host of its own falls back to the environment
-   * origin, which is where an older platform still serves it.
+   * what serves those — `applications.<app>.origin` first, then a hosted entry's origin. Only an
+   * application with neither falls back to the environment origin, which is where an older
+   * platform still serves it.
    */
   apiDocsUrl(app: string): string | undefined {
     const path = this.source?.tree()?.apiDocs[app];
@@ -140,4 +207,40 @@ export class QitsAppLinks {
     if (!entry.host) return entry.path !== '' && current.startsWith(`${entry.path}/`);
     return current.startsWith(`${join(scopePath(scope), entry.subpath).replace(/\/+$/, '')}/`);
   }
+}
+
+/**
+ * Run `then` with an application's API origin as soon as there is one — **synchronously** when the
+ * navigation has already answered (a literal tree, no navigation at all), so a read that could go
+ * out at once still does, and otherwise from an effect the moment it answers. Returns a cancel.
+ *
+ * Internal to the library: the chrome's sources wait through this, an application uses
+ * `whenApiOrigin`.
+ */
+export function afterApiOrigin(
+  links: QitsAppLinks,
+  app: string,
+  injector: Injector,
+  then: (origin: string) => void,
+): () => void {
+  const now = links.apiOrigin(app);
+  if (now !== undefined) {
+    then(now);
+    return () => undefined;
+  }
+  let done = false;
+  const ref = effect(
+    () => {
+      const origin = links.apiOrigin(app);
+      if (origin === undefined || done) return;
+      done = true;
+      untracked(() => then(origin));
+      ref.destroy();
+    },
+    { injector },
+  );
+  return () => {
+    done = true;
+    ref.destroy();
+  };
 }

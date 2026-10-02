@@ -95,9 +95,16 @@ export interface QitsNavEntryBody {
  * Per-application metadata the platform serves beside the slots — facts about an application
  * rather than placements of it. `apiDocs` is where its browsable API document lives, as one of the
  * application's own routes (`/ci/q/swagger-ui`) — served by the application's own host.
+ *
+ * `origin` is where the application itself answers (`https://projects.qits.example`): the one
+ * address a cross-application API call goes to. The edge routes an application's paths on its own
+ * host only, so a call to another application's API is a cross-origin call to this origin — and
+ * only the edge knows it, which is why no SPA composes a hostname. Optional, because an edge that
+ * predates the field does not serve it.
  */
 export interface QitsNavApplication {
   readonly apiDocs?: string | null;
+  readonly origin?: string | null;
 }
 
 /**
@@ -151,6 +158,13 @@ export interface QitsNavTree {
    * HTTP surface", which is a real answer a page renders.
    */
   readonly apiDocs: Readonly<Record<string, string>>;
+  /**
+   * Each application's own origin, by application name, with no trailing slash — the
+   * `applications.<app>.origin` the platform served. Only applications the platform gave one appear.
+   * Optional on the type so a hand-built tree from before the field still compiles; `toNavTree`
+   * always fills it.
+   */
+  readonly origins?: Readonly<Record<string, string>>;
   /** The flat links of a pre-slots answer, and `undefined` whenever slots were served. */
   readonly legacy: readonly QitsNavLink[] | undefined;
 }
@@ -191,6 +205,7 @@ const NOTHING: QitsNavTree = {
   environmentOrigin: undefined,
   projectOrigin: undefined,
   apiDocs: {},
+  origins: {},
   legacy: [],
 };
 
@@ -207,9 +222,7 @@ function toSubpath(subpath: string | null | undefined): string {
 }
 
 /** The api-docs paths the platform served, dropping entries a page could not act on. */
-function toApiDocs(
-  applications: QitsNavigation['applications'],
-): Readonly<Record<string, string>> {
+function toApiDocs(applications: QitsNavigation['applications']): Readonly<Record<string, string>> {
   const paths: Record<string, string> = {};
   for (const [app, metadata] of Object.entries(applications ?? {})) {
     const path = metadata?.apiDocs;
@@ -217,6 +230,17 @@ function toApiDocs(
     paths[app] = path.startsWith('/') ? path : `/${path}`;
   }
   return paths;
+}
+
+/** The application origins the platform served, trailing slashes dropped, blanks ignored. */
+function toOrigins(applications: QitsNavigation['applications']): Readonly<Record<string, string>> {
+  const origins: Record<string, string> = {};
+  for (const [app, metadata] of Object.entries(applications ?? {})) {
+    const origin = typeof metadata?.origin === 'string' ? metadata.origin.replace(/\/+$/, '') : '';
+    if (!app || !origin) continue;
+    origins[app] = origin;
+  }
+  return origins;
 }
 
 /** Entries first by position, then by label — so two entries at one position still have an order. */
@@ -237,6 +261,7 @@ export function toNavTree(body: QitsNavigation | null | undefined): QitsNavTree 
       environmentOrigin: body?.origin,
       projectOrigin: body?.projectOrigin,
       apiDocs: toApiDocs(body?.applications),
+      origins: toOrigins(body?.applications),
       legacy: body?.links ?? [],
     };
   }
@@ -261,6 +286,7 @@ export function toNavTree(body: QitsNavigation | null | undefined): QitsNavTree 
     environmentOrigin: body?.origin,
     projectOrigin: body?.projectOrigin,
     apiDocs: toApiDocs(body?.applications),
+    origins: toOrigins(body?.applications),
     legacy: undefined,
   };
 }

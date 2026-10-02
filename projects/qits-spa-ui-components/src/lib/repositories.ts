@@ -9,6 +9,7 @@ import {
   type EnvironmentProviders,
   type Signal,
 } from '@angular/core';
+import { QitsAppLinks } from './app-links';
 import { QITS_SCOPE, type QitsCategory } from './scope';
 
 /** One repository, as the chrome needs it: an id, the name URLs spell, and the group it draws in. */
@@ -77,9 +78,10 @@ export interface QitsRepositoriesSource {
 export const QITS_REPOSITORIES = new InjectionToken<QitsRepositoriesSource>('QITS_REPOSITORIES');
 
 /**
- * Where a project's repositories are asked for — **absolute**, like the other two reads, so the
- * browser's session cookie reaches qits-projects with no machine token and no CORS pre-flight.
- * The project **id** goes in the path: ids are what the service resolves, slugs are what URLs say.
+ * Where a project's repositories are asked for: under this path, on **qits-projects' own origin**
+ * (`QitsAppLinks.apiOrigin('qits-projects')`), with the session carried by `withCredentials` — the
+ * same arrangement as the project list. The project **id** goes in the path: ids are what the
+ * service resolves, slugs are what URLs say.
  */
 export const QITS_REPOSITORIES_URL = '/projects/api/projects';
 
@@ -120,12 +122,21 @@ class HttpRepositoriesSource implements QitsRepositoriesSource {
   // package does not have as a peer. `subscribe()`'s return value is used, never described.
   private cancel: (() => void) | undefined = undefined;
 
-  constructor(base: string) {
+  /**
+   * `base` given is used exactly as given; left unsaid, each read waits for qits-projects' origin
+   * and goes under {@link QITS_REPOSITORIES_URL} there.
+   */
+  constructor(base: string | undefined) {
     const http = inject(HttpClient);
     const scope = inject(QITS_SCOPE, { optional: true });
+    const links = base === undefined ? inject(QitsAppLinks) : undefined;
 
     effect(() => {
       const projectId = scope?.projectId();
+      // Until the navigation says where qits-projects is there is nowhere to ask, and nothing is
+      // recorded as asked — the effect runs again the moment the answer lands.
+      const root = base ?? links?.apiUrl('qits-projects', QITS_REPOSITORIES_URL);
+      if (root === undefined) return;
       if (projectId === this.asked) return;
       this.asked = projectId;
       this.cancel?.();
@@ -134,7 +145,9 @@ class HttpRepositoriesSource implements QitsRepositoriesSource {
       this.gaveUp.set(false);
       if (!projectId) return;
       const subscription = http
-        .get<QitsRepositoryEntries>(`${base}/${encodeURIComponent(projectId)}/repositories`)
+        .get<QitsRepositoryEntries>(`${root}/${encodeURIComponent(projectId)}/repositories`, {
+          withCredentials: true,
+        })
         .subscribe({
           next: (body) => {
             this.answered.set(
@@ -165,9 +178,8 @@ class HttpRepositoriesSource implements QitsRepositoriesSource {
  * project to ask about, and the source stays empty rather than guessing at one.
  */
 export function provideQitsRepositories(options?: { readonly url?: string }): EnvironmentProviders {
-  const url = options?.url ?? QITS_REPOSITORIES_URL;
   return makeEnvironmentProviders([
-    { provide: QITS_REPOSITORIES, useFactory: () => new HttpRepositoriesSource(url) },
+    { provide: QITS_REPOSITORIES, useFactory: () => new HttpRepositoriesSource(options?.url) },
   ]);
 }
 

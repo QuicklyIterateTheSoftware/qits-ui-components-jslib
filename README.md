@@ -147,11 +147,15 @@ bootstrapApplication(App, {
 });
 ```
 
-All three URLs are **absolute**, deliberately unlike the platform's `api/config.json` convention of
-a SPA reading from its own backend. Every SPA is served same-origin behind the edge, so an absolute
-path is not a shortcut: it is what carries the browser's session cookie to the service that owns the
-answer, with no machine token and no CORS pre-flight. A SPA asking its own backend would be asking a
-service that knows what it does and nothing about what is deployed beside it.
+None of the three is relative to the SPA's base href, deliberately unlike the platform's
+`api/config.json` convention of a SPA reading from its own backend: a SPA asking its own backend
+would be asking a service that knows what it does and nothing about what is deployed beside it.
+`/main-navigation` is asked of the SPA's own host, which the edge answers on every vhost. The
+projects reads go to **qits-projects' own origin** — the edge routes an application's paths on its
+own host only — which the navigation states as `applications.qits-projects.origin`
+(`QitsAppLinks.apiOrigin`, below). They wait for the navigation to answer, and carry the session
+cross-origin with `withCredentials`; where the navigation names no origin they fall back to the bare
+same-origin path, which is what an edge that predates the field still routes.
 
 **`provideQitsNavigation()`** issues one `GET /main-navigation` for the life of the application. The
 edge answers with slots — one entry per application, filed under where it belongs in the chrome:
@@ -166,6 +170,9 @@ edge answers with slots — one entry per application, filed under where it belo
     "platform": [{ "app": "qits-platform-events", "label": "Events", "host": "events", "path": "/events", "origin": "https://events.dev.example.com", "position": 1 }],
     "project.detail": [{ "app": "qits-workspaces", "label": "Workspaces", "host": "workspaces", "path": "/workspaces", "origin": "https://workspaces.dev.example.com", "position": 1 }],
     "services.details": [{ "app": "qits-ci", "label": "CI", "host": null, "path": "/ci", "origin": "https://dev.example.com", "position": 2 }]
+  },
+  "applications": {
+    "qits-projects": { "apiDocs": "/projects/q/swagger-ui", "origin": "https://projects.dev.example.com" }
   }
 }
 ```
@@ -183,6 +190,10 @@ label out from the apex. An edge that predates slots answers the flat `{"links":
 and the tree carries it as `legacy` — set **only** when no slots were served, because the two are
 exclusive: `legacy` means "this platform cannot tell me its shape", and the sidebar then draws the
 flat list it always drew.
+
+`applications` carries facts about an application rather than placements of it: `apiDocs`, the path
+of its browsable API document, and `origin`, where it answers — normalised into `tree.apiDocs` and
+`tree.origins` (no trailing slash).
 
 `provideQitsNavigationTree(payload)` and `provideQitsNavigationLinks([…])` answer the same contract
 from a literal — specs, stories, an `ng serve` with no platform in front of it. Nothing is fetched,
@@ -235,6 +246,33 @@ appLinks.href('qits-artifacts', 'images', scope()); // https://dev.example.com/a
 appLinks.origin('qits-artifacts'); //                undefined — no host of its own yet
 appLinks.environmentOrigin(); //                     https://dev.example.com — clone URLs live here
 ```
+
+### Calling another application's API
+
+The edge routes an application's paths on **its own host only**, so a call to another application's
+API goes to that application's origin, as `applications.<app>.origin` of the navigation states it.
+No SPA composes a hostname.
+
+```ts
+appLinks.apiOrigin('qits-projects'); //  'https://projects.dev.example.com', '' or undefined
+appLinks.apiUrl('qits-projects', '/projects/api/projects'); // the same, joined to a path
+await appLinks.whenApiUrl('qits-projects', '/projects/api/projects'); // waits for the navigation
+```
+
+| `apiOrigin(app)` | means                                                         | the caller           |
+| ---------------- | ------------------------------------------------------------- | -------------------- |
+| `undefined`      | the navigation has not answered yet                           | **waits**            |
+| an origin        | the application's own, no trailing slash                      | calls it, with credentials |
+| `''`             | answered (or failed) with no origin for it, or no navigation provided | calls the bare path, same-origin |
+
+`apiOrigin`/`apiUrl` read a signal, so inside a `computed` or `effect` they re-run when the answer
+lands; `whenApiOrigin(app)`/`whenApiUrl(app, path)` are the promise forms, resolving at once when the
+navigation has already answered and never rejecting. A cross-origin call has to carry the session
+itself: `fetch(url, { credentials: 'include' })`, `HttpClient` with `withCredentials: true`,
+`new EventSource(url, { withCredentials: true })`. The hosted entry's origin is deliberately **not**
+a fallback: an edge too old to serve `applications.<app>.origin` is also too old to answer the CORS
+request such a call would be. `origin(app)` and `apiDocsUrl(app)` prefer the declared origin too,
+so an application with no navigation entry still has its own address.
 
 `href` is the origin from the navigation, the scope path, then the path. An application the platform
 does **not** serve on a host of its own is reached at its own segment — the `path` every entry
@@ -372,9 +410,9 @@ bootstrapApplication(App, {
 }
 ```
 
-`GET /ci/api/runs/active`, a **same-origin path** like the chrome's other reads and for the same
-reason: the edge routes `/ci` on every vhost, so the browser's own session reaches qits-ci with no
-machine token, no CORS pre-flight and no origin compiled in here. **That listing is the single
+`GET /ci/api/runs/active` on **qits-ci's own origin** (`apiOrigin('qits-ci')`), with the session
+carried by `withCredentials`; nothing is read, opened or timed before the navigation has answered,
+and no origin is compiled in here. **That listing is the single
 source of truth** and the only thing ever drawn; everything below is about when to read it again.
 
 **The count stays current while the panel is shut**, because the bolt says something on a page
@@ -383,8 +421,8 @@ and after that whenever the platform says something happened —
 
     GET /events/api/stream?names=BuildStatusChanged,BuildSuccessful,BuildFailed
 
-an `EventSource` on a bare same-origin path, for `/ci`'s reason: the edge routes `/events` on every
-vhost too. `BuildStatusChanged` fires on every transition of a run's status — queued, started, and
+an `EventSource` on **qits-events' own origin** (`apiOrigin('qits-events')`), opened
+`withCredentials` so the cookie crosses origins. `BuildStatusChanged` fires on every transition of a run's status — queued, started, and
 each terminal state — so both edges of the active listing are announced. A frame carries **nothing
 this library reads**: it means only "go and look", and a burst of them is coalesced into one read
 (250ms). Every connect re-reads, **reconnects included** — the stream is live-only, with no replay,

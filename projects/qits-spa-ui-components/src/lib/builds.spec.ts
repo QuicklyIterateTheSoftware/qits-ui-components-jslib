@@ -1,5 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import {
@@ -11,10 +12,12 @@ import {
   QITS_BUILDS_STREAM_DEBOUNCE_MS,
   QITS_BUILDS_STREAM_URL,
   QITS_BUILDS_URL,
+  QITS_EVENT_SOURCE,
   toBuilds,
   type QitsBuildsSource,
   type QitsEventSourceLike,
 } from './builds';
+import { QITS_NAVIGATION, toNavTree, type QitsNavTree } from './navigation';
 
 describe('toBuilds', () => {
   it('reads the rows qits-ci answers with, in the order it listed them', () => {
@@ -532,5 +535,99 @@ describe('provideQitsBuildList', () => {
 
     expect(builds.runs()).toHaveLength(1);
     expect(builds.failed()).toBe(false);
+  });
+});
+
+describe('provideQitsBuilds across origins', () => {
+  const ORIGINS = {
+    slots: {},
+    applications: {
+      'qits-ci': { origin: 'https://ci.qits.example' },
+      'qits-events': { origin: 'https://events.qits.example' },
+    },
+  };
+  let streams: FakeStream[];
+  let tree: ReturnType<typeof signal<QitsNavTree | undefined>>;
+
+  function source(): QitsBuildsSource {
+    streams = [];
+    tree = signal<QitsNavTree | undefined>(undefined);
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: QITS_NAVIGATION, useValue: { tree, failed: signal(false) } },
+        provideQitsBuilds({
+          eventSource: (url: string) => {
+            const stream = new FakeStream(url);
+            streams.push(stream);
+            return stream;
+          },
+        }),
+      ],
+    });
+    return TestBed.inject(QITS_BUILDS);
+  }
+
+  function http(): HttpTestingController {
+    return TestBed.inject(HttpTestingController);
+  }
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('reads, opens and times nothing until the navigation says where qits-ci is', () => {
+    const builds = source();
+    builds.watch(true);
+    TestBed.tick();
+    vi.advanceTimersByTime(60_000);
+
+    http().verify();
+    expect(streams).toHaveLength(0);
+    expect(builds.runs()).toBeUndefined();
+  });
+
+  it('reads the listing on qits-ci and opens the stream on qits-events, with the session', () => {
+    const builds = source();
+    tree.set(toNavTree(ORIGINS));
+    TestBed.tick();
+
+    const request = http().expectOne(`https://ci.qits.example${QITS_BUILDS_URL}`);
+    expect(request.request.withCredentials).toBe(true);
+    request.flush({ runs: [{ id: 'run-1', repoName: 'qits-ci-service', status: 'RUNNING' }] });
+    expect(builds.runs()).toHaveLength(1);
+    expect(streams.map((stream) => stream.url)).toEqual([
+      `https://events.qits.example${QITS_BUILDS_STREAM_URL}`,
+    ]);
+  });
+
+  it('keeps the same-origin paths where the navigation names no origin', () => {
+    source();
+    tree.set(toNavTree({ slots: {} }));
+    TestBed.tick();
+
+    http().expectOne(QITS_BUILDS_URL).flush({ runs: [] });
+    expect(streams.map((stream) => stream.url)).toEqual([QITS_BUILDS_STREAM_URL]);
+  });
+});
+
+describe('QITS_EVENT_SOURCE', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('opens the browser stream with credentials, because it lives on another origin', () => {
+    const opened: { url: string; init: EventSourceInit | undefined }[] = [];
+    vi.stubGlobal(
+      'EventSource',
+      class {
+        constructor(url: string, init?: EventSourceInit) {
+          opened.push({ url, init });
+        }
+      },
+    );
+    TestBed.inject(QITS_EVENT_SOURCE)?.('https://events.qits.example/events/api/stream');
+
+    expect(opened).toEqual([
+      { url: 'https://events.qits.example/events/api/stream', init: { withCredentials: true } },
+    ]);
   });
 });

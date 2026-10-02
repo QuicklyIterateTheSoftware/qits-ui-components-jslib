@@ -1,10 +1,17 @@
 import { provideLocationMocks } from '@angular/common/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
 import { QitsAppLinks, QITS_BROWSER_ORIGIN } from './app-links';
-import { provideQitsNavigationTree, type QitsNavEntry } from './navigation';
+import {
+  provideQitsNavigationTree,
+  QITS_NAVIGATION,
+  toNavTree,
+  type QitsNavEntry,
+  type QitsNavigation,
+  type QitsNavTree,
+} from './navigation';
 
 describe('QitsAppLinks', () => {
   @Component({ template: '' })
@@ -270,5 +277,104 @@ describe('QitsAppLinks', () => {
 
     await TestBed.inject(Router).navigateByUrl('/qits/services/qits-ci/');
     expect(appLinks.isCurrent(apiDocs, scope)).toBe(false);
+  });
+
+  it('prefers the platform-declared origin, so an application with no entry has one', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideQitsNavigationTree({
+          ...NAVIGATION,
+          applications: {
+            ...NAVIGATION.applications,
+            'qits-stt': { apiDocs: '/stt/q/swagger-ui', origin: 'https://stt.dev.example.com/' },
+          },
+        }),
+      ],
+    });
+    const appLinks = TestBed.inject(QitsAppLinks);
+    expect(appLinks.origin('qits-stt')).toBe('https://stt.dev.example.com');
+    // No longer the environment origin: the declared one wins.
+    expect(appLinks.apiDocsUrl('qits-stt')).toBe('https://stt.dev.example.com/stt/q/swagger-ui');
+  });
+});
+
+describe('QitsAppLinks api origins', () => {
+  const ANSWER: QitsNavigation = {
+    slots: {},
+    applications: {
+      'qits-projects': { origin: 'https://projects.qits.example' },
+      'qits-ci': { apiDocs: '/ci/q/swagger-ui' },
+    },
+  };
+
+  /** A navigation that has not answered yet, and the hand that answers it. */
+  function pending(): { appLinks: QitsAppLinks; answer: (tree: QitsNavTree) => void } {
+    const tree = signal<QitsNavTree | undefined>(undefined);
+    TestBed.configureTestingModule({
+      providers: [{ provide: QITS_NAVIGATION, useValue: { tree, failed: signal(false) } }],
+    });
+    return { appLinks: TestBed.inject(QitsAppLinks), answer: (value) => tree.set(value) };
+  }
+
+  it('reads an application origin the navigation declared, absolute', () => {
+    TestBed.configureTestingModule({ providers: [provideQitsNavigationTree(ANSWER)] });
+    const appLinks = TestBed.inject(QitsAppLinks);
+    expect(appLinks.apiOrigin('qits-projects')).toBe('https://projects.qits.example');
+    expect(appLinks.apiUrl('qits-projects', '/projects/api/projects')).toBe(
+      'https://projects.qits.example/projects/api/projects',
+    );
+  });
+
+  it('answers the same-origin empty string where the navigation named no origin', () => {
+    TestBed.configureTestingModule({ providers: [provideQitsNavigationTree(ANSWER)] });
+    const appLinks = TestBed.inject(QitsAppLinks);
+    expect(appLinks.apiOrigin('qits-ci')).toBe('');
+    expect(appLinks.apiOrigin('qits-nothing')).toBe('');
+    expect(appLinks.apiUrl('qits-ci', '/ci/api/runs/active')).toBe('/ci/api/runs/active');
+  });
+
+  it('answers the empty string where no navigation is provided at all', () => {
+    const appLinks = TestBed.inject(QitsAppLinks);
+    expect(appLinks.apiOrigin('qits-projects')).toBe('');
+  });
+
+  it('says undefined until the navigation answers, and the origin after', () => {
+    const { appLinks, answer } = pending();
+    expect(appLinks.apiOrigin('qits-projects')).toBeUndefined();
+    expect(appLinks.apiUrl('qits-projects', '/projects/api/projects')).toBeUndefined();
+
+    answer(toNavTree(ANSWER));
+    expect(appLinks.apiOrigin('qits-projects')).toBe('https://projects.qits.example');
+  });
+
+  it('waits for the navigation before resolving, rather than resolving at the empty string', async () => {
+    const { appLinks, answer } = pending();
+    let resolved: string | undefined;
+    void appLinks.whenApiUrl('qits-projects', '/projects/api/projects').then((url) => {
+      resolved = url;
+    });
+    TestBed.tick();
+    await Promise.resolve();
+    expect(resolved).toBeUndefined();
+
+    answer(toNavTree(ANSWER));
+    TestBed.tick();
+    await Promise.resolve();
+    expect(resolved).toBe('https://projects.qits.example/projects/api/projects');
+  });
+
+  it('resolves at once when the navigation has already answered', async () => {
+    TestBed.configureTestingModule({ providers: [provideQitsNavigationTree(ANSWER)] });
+    await expect(TestBed.inject(QitsAppLinks).whenApiOrigin('qits-projects')).resolves.toBe(
+      'https://projects.qits.example',
+    );
+  });
+
+  it('resolves with the empty string once a navigation that names nothing answers', async () => {
+    const { appLinks, answer } = pending();
+    const origin = appLinks.whenApiOrigin('qits-ci');
+    answer(toNavTree(undefined));
+    TestBed.tick();
+    await expect(origin).resolves.toBe('');
   });
 });

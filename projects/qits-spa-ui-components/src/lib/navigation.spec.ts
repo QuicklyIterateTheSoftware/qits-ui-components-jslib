@@ -229,7 +229,25 @@ describe('toNavTree', () => {
       environmentOrigin: undefined,
       projectOrigin: undefined,
       apiDocs: {},
+      origins: {},
       legacy: [],
+    });
+  });
+
+  it('carries each application origin the platform served, without a trailing slash', () => {
+    const tree = toNavTree({
+      slots: {},
+      applications: {
+        'qits-projects': { apiDocs: '/projects/q/swagger-ui', origin: 'https://projects.example/' },
+        'qits-ci': { origin: 'https://ci.example' },
+        'qits-docs': { apiDocs: '/docs/q' },
+        'qits-blank': { origin: '' },
+        'qits-null': null,
+      },
+    });
+    expect(tree.origins).toEqual({
+      'qits-projects': 'https://projects.example',
+      'qits-ci': 'https://ci.example',
     });
   });
 

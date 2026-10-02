@@ -58,7 +58,7 @@ navigation is empty and `aria-busy`; if it fails or comes back empty the layout 
 for specs and stories. A non-empty `[links]` input overrides both.
 
 `provideQitsBuilds()` adds the pending-builds bolt beside the project picker: a popover of what
-qits-ci is building and what is queued, read from `/ci/api/runs/active` when it opens and every five
+qits-ci is building and what is queued, read from `/ci/api/runs/active` on qits-ci's own origin (`QitsAppLinks.apiOrigin`) when it opens and every five
 seconds while it stays open — and nothing at all while it is closed. Each row links into the run on
 the ci host, and where qits-ci predicted the run's steps it draws them to scale as a segmented bar,
 filling against a local one-second clock with the time actually taken beside it. No provider, no
