@@ -539,18 +539,21 @@ polled and no stream opened.
 `@qits/ui-components` lives in the platform's own npm repository, not on npmjs. A consumer needs
 one `.npmrc` next to its `package.json` — the scope routing, nothing else:
 
-    registry=http://localhost:8082/artifacts/npm/npmjs/     # everything, through the npmjs cache
-    @qits:registry=http://localhost:8081/artifacts/npm/npm/ # ours
+    registry=https://mirror.qits.wohlben.eu/npm/npmjs/        # everything, through the npmjs cache
+    @qits:registry=https://registry.qits.wohlben.eu/artifacts/npm/npm/ # ours
 
     pnpm add @qits/ui-components
 
-Those are the addresses of a local platform as published on the deployment host, and they are two
-services since the byte-plane split: the cache is `qits-platform-mirror` on 8082, the hosted scope
-is `qits-artifacts` on 8081. Inside qits-net — a CI step, another container — the same two roots
-are `http://qits-platform-mirror:8080/artifacts/npm/npmjs/` and
-`http://qits-artifacts:8080/artifacts/npm/npm/`, and CI writes them from environment rather than
-reading any file (see `.config/qits/ci-event-release-request.yml`). Neither registry wants a
-credential.
+Those two hosts are code under the platform's public domain (qits-731) — `wohlben.eu` is the live
+platform's — rather than an address that differs by environment, so the same `.npmrc` works from a
+workstation, from `qits-net`, from anywhere. Both answer 401 anonymously: put a credential in
+`~/.npmrc`, keyed by the scheme-less URL —
+
+    //mirror.qits.wohlben.eu/npm/npmjs/:_authToken=...
+    //registry.qits.wohlben.eu/artifacts/npm/npm/:_authToken=...
+
+— a bearer, or the commissioned client pair as Basic. CI derives the same pair from `QITS_DOMAIN`
+and mints its own token; see `.config/qits/release-archetypes/npm-library.yml`.
 
 The published package is the **prebuilt ng-packagr output** — FESM bundles and type definitions, in
 Angular's partial compilation format. There is nothing to compile on install and no `prepare` hook;
