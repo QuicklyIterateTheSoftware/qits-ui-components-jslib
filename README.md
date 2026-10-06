@@ -27,6 +27,42 @@ opened the panel over it.
 | `QitsDiffViewer` | `<qits-diff-viewer>` | A file's unified diff, coloured by line. `patch` is git's own text and `path` the file it is of; it renders, it never fetches.                                                                                                   |
 | `QitsChangeTree` | `<qits-change-tree>` | The files a change set touches, as a tree. `entries` (`{ path, previousPath, changeType }[]`), two-way `selected`, `label`. Single-child directory chains fold into one row.                                                     |
 | `QitsStepProgress` | `<qits-step-progress>` | A pipeline's steps as a segmented track: one bubble per planned step, each filling against **its own** expected duration with its actual/expected beside it. Required `steps` (`{ expectedMillis, startedAt?, finishedAt? }[]`), `label`. |
+| `QitsRunReports` | `<qits-run-reports>` | A CI run's release reports: every highlight in one strip, then one collapsible section per report drawn by the view its kind registered. Required `runId`; `reload()` when the run finishes. Reads qits-ci itself — see _Release reports_. |
+
+## Release reports
+
+A release request's QA run submits structured **reports** to qits-ci — `test-results` and
+`coverage` today, more kinds later — and `<qits-run-reports>` is the one area both pages draw them
+in. It is the second component here that reads for itself, on the bolt's terms: qits-ci's own origin
+(`QitsAppLinks.apiOrigin('qits-ci')`), after the navigation has said where that is, with
+`withCredentials`. `QitsReportsClient` is the whole of that door — the summaries, one report, the
+baseline, and the baseline's reports of a kind — and a story or a spec replaces it with a literal.
+
+```ts
+providers: [provideQitsStandardReportKinds()] // test-results v1 + coverage v1
+```
+
+```html
+<qits-run-reports [runId]="qaRunId()" />
+```
+
+**A kind is a registration, not a change here.** `QITS_REPORT_KINDS` is a multi token;
+`provideQitsReportKind({ kind, versions, title, component })` adds one, and the area renders that
+component through `NgComponentOutlet` with three inputs — `report`, `baseline` (the baseline run's
+report of the same kind, or null) and `context` (`runId`, `commitSha`, `baseline`, `ciOrigin`). The
+last registration listing the payload's version wins, so an application can override a standard
+view.
+
+- The summaries are read when `runId` changes and only then: a host re-binding the same id every
+  poll costs nothing. The host calls `reload()` when the run finishes.
+- A section's payload and baseline are read when it opens, never before.
+- A kind or version with no view shows its highlights and says so; no reports is "Not reported."; a
+  failed read is one muted line. A report never breaks the page it is on.
+
+The test-results view leaves qits-755 its seam twice: the `failureOpened` output (the failure's
+`coordinates`) for a host drawing the view itself, and `QITS_TEST_FAILURE_PREVIEW`, a component
+drawn inside every opened failure with `coordinates` and `context`, for inside the area, where no
+host can bind an output.
 
 ## A diff is rendered, never fetched
 

@@ -103,3 +103,49 @@ export type {
   QitsChangeTone,
   QitsChangeType,
 } from './lib/change-tree-model';
+export {
+  provideQitsReportKind,
+  provideQitsStandardReportKinds,
+  QITS_REPORT_KINDS,
+  QITS_REPORTS_PATH,
+  QitsReportsClient,
+} from './lib/reports';
+export type {
+  QitsReport,
+  QitsReportBaseline,
+  QitsReportContext,
+  QitsReportHighlight,
+  QitsReportKind,
+  QitsReportSummary,
+  QitsRunReportsDto,
+} from './lib/reports';
+export { QitsRunReports, qitsReportKindFor } from './lib/run-reports';
+export { QitsReportHighlights, qitsHighlightTone } from './lib/report-highlights';
+export {
+  QITS_TEST_FAILURE_PREVIEW,
+  QITS_TEST_RESULTS_KIND,
+  QitsTestResultsReport,
+} from './lib/test-results-report';
+export type {
+  QitsTestCoordinates,
+  QitsTestFailure,
+  QitsTestFailureShape,
+  QitsTestResultsPayload,
+  QitsTestSuite,
+  QitsTestTotals,
+} from './lib/test-results-report';
+export {
+  QITS_COVERAGE_KIND,
+  QitsCoverageReport,
+  qitsLineRanges,
+  qitsPercent,
+  qitsPointsDelta,
+} from './lib/coverage-report';
+export type {
+  QitsCoverageDiff,
+  QitsCoverageFile,
+  QitsCoveragePayload,
+  QitsCoverageSource,
+  QitsCoverageTotal,
+  QitsCoverageUncovered,
+} from './lib/coverage-report';
