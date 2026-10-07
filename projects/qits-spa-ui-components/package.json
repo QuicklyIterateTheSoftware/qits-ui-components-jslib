@@ -13,6 +13,7 @@
     "@angular/router": "^21.2.0 || ^22.0.0"
   },
   "dependencies": {
+    "mermaid": "^11.17.2",
     "tslib": "^2.3.0"
   },
   "sideEffects": false
