@@ -11,6 +11,7 @@ import {
 import { map, Observable, switchMap } from 'rxjs';
 
 import { afterApiOrigin, QitsAppLinks } from './app-links';
+import { QITS_CONTRACTS_REPORT_KIND } from './contracts-report';
 import { QITS_COVERAGE_KIND, QitsCoverageReport } from './coverage-report';
 import { provideQitsStandardFailureInsights } from './failures/standard-failure-insights';
 import { QITS_TEST_RESULTS_KIND, QitsTestResultsReport } from './test-results-report';
@@ -123,8 +124,9 @@ export function provideQitsReportKind(kind: QitsReportKind): EnvironmentProvider
 }
 
 /**
- * The first two kinds' views, registered together: `test-results` and `coverage`, payload version 1
- * of each. Both pages that host `<qits-run-reports>` provide this once.
+ * The standard kinds' views, registered together: `test-results`, `coverage` and `contracts`
+ * (qits-759), payload version 1 of each. Both pages that host `<qits-run-reports>` provide this
+ * once, so a kind added here reaches both with no change of their own.
  *
  * It brings `provideQitsStandardFailureInsights()` with it, so an opened failure in the test results
  * shows its test code wherever the failure locates it.
@@ -143,6 +145,7 @@ export function provideQitsStandardReportKinds(): EnvironmentProviders {
       title: 'Coverage',
       component: QitsCoverageReport,
     }),
+    provideQitsReportKind(QITS_CONTRACTS_REPORT_KIND),
     provideQitsStandardFailureInsights(),
   ]);
 }
