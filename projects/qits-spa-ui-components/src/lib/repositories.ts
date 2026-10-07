@@ -3,13 +3,17 @@ import {
   DestroyRef,
   effect,
   inject,
+  Injectable,
   InjectionToken,
+  Injector,
   makeEnvironmentProviders,
+  PendingTasks,
   signal,
+  untracked,
   type EnvironmentProviders,
   type Signal,
 } from '@angular/core';
-import { QitsAppLinks } from './app-links';
+import { afterApiOrigin, QitsAppLinks } from './app-links';
 import { QITS_SCOPE, type QitsCategory } from './scope';
 
 /** One repository, as the chrome needs it: an id, the name URLs spell, and the group it draws in. */
@@ -85,6 +89,24 @@ export const QITS_REPOSITORIES = new InjectionToken<QitsRepositoriesSource>('QIT
  */
 export const QITS_REPOSITORIES_URL = '/projects/api/projects';
 
+/**
+ * `provideQitsRepositories({ url })`'s `url`, for {@link QitsProjectRepositoryLookup} to ask under
+ * the same base the scoped source does. Internal: unset, both wait for qits-projects' origin.
+ */
+const QITS_REPOSITORIES_BASE = new InjectionToken<string>('QITS_REPOSITORIES_BASE');
+
+/** The listing of one project's repositories, under `root` — the one door both readers use. */
+function repositoriesUrl(root: string, projectId: string): string {
+  return `${root}/${encodeURIComponent(projectId)}/repositories`;
+}
+
+/** qits-projects' answer, as the repositories the chrome knows how to draw; unusable rows dropped. */
+function toRepositories(body: QitsRepositoryEntries | null): QitsRepository[] {
+  return (body?.entries ?? [])
+    .map((entry) => toRepository(entry?.repository ?? {}))
+    .filter((repository): repository is QitsRepository => repository !== undefined);
+}
+
 function toRepository(row: {
   id?: string;
   name?: string;
@@ -145,16 +167,10 @@ class HttpRepositoriesSource implements QitsRepositoriesSource {
       this.gaveUp.set(false);
       if (!projectId) return;
       const subscription = http
-        .get<QitsRepositoryEntries>(`${root}/${encodeURIComponent(projectId)}/repositories`, {
-          withCredentials: true,
-        })
+        .get<QitsRepositoryEntries>(repositoriesUrl(root, projectId), { withCredentials: true })
         .subscribe({
           next: (body) => {
-            this.answered.set(
-              (body?.entries ?? [])
-                .map((entry) => toRepository(entry?.repository ?? {}))
-                .filter((repository): repository is QitsRepository => repository !== undefined),
-            );
+            this.answered.set(toRepositories(body));
             this.wrapper.set(body?.wrapper?.repositoryId ?? undefined);
           },
           // A listing that could not be fetched is not a failed application: the sidebar says so
@@ -180,7 +196,76 @@ class HttpRepositoriesSource implements QitsRepositoriesSource {
 export function provideQitsRepositories(options?: { readonly url?: string }): EnvironmentProviders {
   return makeEnvironmentProviders([
     { provide: QITS_REPOSITORIES, useFactory: () => new HttpRepositoriesSource(options?.url) },
+    ...(options?.url === undefined
+      ? []
+      : [{ provide: QITS_REPOSITORIES_BASE, useValue: options.url }]),
   ]);
+}
+
+/** One project's repositories as {@link QitsProjectRepositoryLookup} has them so far. */
+export interface QitsProjectRepositories {
+  /** `undefined` while the listing is being asked for. */
+  readonly repositories: readonly QitsRepository[] | undefined;
+  readonly failed: boolean;
+}
+
+/**
+ * The repositories of **any** project by id, for a page that has to resolve a repository outside
+ * the project in scope — or with no project in scope at all, like qits-ci's `/runs/<id>`.
+ *
+ * <p>The same door and the same mapping as `QITS_REPOSITORIES`' own read: `GET
+ * {@link QITS_REPOSITORIES_URL}/{projectId}/repositories` on qits-projects' origin, waiting for the
+ * navigation to state it, with the session. One request per project for the life of the
+ * application; a failed read is not kept, so the next ask tries again. Each read is a pending task,
+ * so `whenStable()` waits for it.
+ *
+ * <p>Root-provided and replaceable; `provideQitsRepositoryList(...)` stands in for it with its
+ * literal, so a spec or a story fetches nothing here either.
+ */
+@Injectable({ providedIn: 'root' })
+export class QitsProjectRepositoryLookup {
+  private readonly http = inject(HttpClient);
+  private readonly links = inject(QitsAppLinks);
+  private readonly injector = inject(Injector);
+  private readonly pending = inject(PendingTasks);
+  private readonly base = inject(QITS_REPOSITORIES_BASE, { optional: true }) ?? undefined;
+  private readonly cache = new Map<string, Signal<QitsProjectRepositories>>();
+
+  /**
+   * The project's repositories, asked for on the first call and shared by every later one. Safe to
+   * call from a `computed`: nothing it starts is tracked.
+   */
+  repositories(projectId: string): Signal<QitsProjectRepositories> {
+    const cached = this.cache.get(projectId);
+    if (cached) return cached;
+    const state = signal<QitsProjectRepositories>({ repositories: undefined, failed: false });
+    this.cache.set(projectId, state.asReadonly());
+    untracked(() => {
+      const done = this.pending.add();
+      const ask = (root: string) =>
+        this.http
+          .get<QitsRepositoryEntries>(repositoriesUrl(root, projectId), { withCredentials: true })
+          .subscribe({
+            next: (body) => {
+              state.set({ repositories: toRepositories(body), failed: false });
+              done();
+            },
+            error: () => {
+              this.cache.delete(projectId);
+              state.set({ repositories: [], failed: true });
+              done();
+            },
+          });
+      if (this.base !== undefined) {
+        ask(this.base);
+        return;
+      }
+      afterApiOrigin(this.links, 'qits-projects', this.injector, () =>
+        ask(this.links.apiUrl('qits-projects', QITS_REPOSITORIES_URL) ?? QITS_REPOSITORIES_URL),
+      );
+    });
+    return state.asReadonly();
+  }
 }
 
 /**
@@ -197,5 +282,14 @@ export function provideQitsRepositoryList(
     wrapperRepositoryId: signal(wrapperRepositoryId),
     failed: signal(options?.failed ?? false),
   };
-  return makeEnvironmentProviders([{ provide: QITS_REPOSITORIES, useValue: source }]);
+  const answer = signal<QitsProjectRepositories>({
+    repositories,
+    failed: options?.failed ?? false,
+  }).asReadonly();
+  // The literal stands for whichever project asks, the way it does for the scoped listing.
+  const lookup: Pick<QitsProjectRepositoryLookup, 'repositories'> = { repositories: () => answer };
+  return makeEnvironmentProviders([
+    { provide: QITS_REPOSITORIES, useValue: source },
+    { provide: QitsProjectRepositoryLookup, useValue: lookup },
+  ]);
 }

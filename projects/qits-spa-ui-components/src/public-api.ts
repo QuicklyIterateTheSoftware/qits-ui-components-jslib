@@ -67,8 +67,10 @@ export {
   provideQitsRepositoryList,
   QITS_REPOSITORIES,
   QITS_REPOSITORIES_URL,
+  QitsProjectRepositoryLookup,
 } from './lib/repositories';
 export type {
+  QitsProjectRepositories,
   QitsRepositoriesSource,
   QitsRepository,
   QitsRepositoryEntries,

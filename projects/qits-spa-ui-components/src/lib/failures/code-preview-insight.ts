@@ -12,7 +12,12 @@ import {
 import { QitsAppLinks } from '../app-links';
 import { QITS_PROJECTS } from '../projects';
 import type { QitsReportContext } from '../reports';
-import { QITS_REPOSITORIES, type QitsRepository } from '../repositories';
+import {
+  QITS_REPOSITORIES,
+  QitsProjectRepositoryLookup,
+  type QitsProjectRepositories,
+  type QitsRepository,
+} from '../repositories';
 import { QITS_SCOPE } from '../scope';
 import type { QitsTestFailure } from '../test-results-report';
 import { QitsCodeExcerpt } from './code-excerpt';
@@ -45,9 +50,12 @@ type View =
  * commit the run tested, with a link to the same lines on the git host's Code page.
  *
  * The repository is named in the coordinates and resolved to its id through the chrome's
- * repository listing (`QITS_REPOSITORIES`), which lists the project in scope — so a failure of
- * another project's repository is not resolvable here, and says so. The read itself is
- * {@link QitsSourceFiles}', and is made once per file and commit.
+ * repository listing (`QITS_REPOSITORIES`) where that lists the failure's project — the project in
+ * scope — and otherwise through {@link QitsProjectRepositoryLookup}, by the project id the
+ * coordinates carry: a page with no project in scope, like qits-ci's `/runs/<id>`, or a failure of
+ * another project. A failure that names no project, on a page that has none in scope, is not
+ * resolvable here, and says so. The read itself is {@link QitsSourceFiles}', and is made once per
+ * file and commit.
  *
  * Every way it can go short of the excerpt is one muted line, never an error: no repository here,
  * a commit the host no longer has, a path not in it, a binary or oversized file, a failed read, a
@@ -105,6 +113,7 @@ export class QitsCodePreview {
   private readonly projects = inject(QITS_PROJECTS, { optional: true });
   private readonly links = inject(QitsAppLinks);
   private readonly files = inject(QitsSourceFiles);
+  private readonly lookup = inject(QitsProjectRepositoryLookup);
 
   private readonly coordinates = computed(() => this.failure().coordinates);
   protected readonly language = computed(
@@ -115,16 +124,71 @@ export class QitsCodePreview {
   );
   protected readonly sha7 = computed(() => this.sha().slice(0, 7));
 
-  private readonly target = computed<Target>(() => {
-    const { name, projectId } = this.coordinates().repository ?? {};
-    if (!this.repositories || !name) return { state: 'unresolved' };
-    // The listing is the scoped project's; a failure of another project's repository is not in it.
+  /**
+   * Where the failure's repository is looked for: the scoped listing where it covers the failure's
+   * project, else that project's own through the lookup — or nowhere, or not decidable yet.
+   */
+  private readonly route = computed<'scope' | 'lookup' | 'waiting' | 'none'>(() => {
+    const source = this.repositories;
+    if (!source) return 'none';
+    const projectId = this.coordinates().repository?.projectId;
     const scoped = this.scope?.projectId();
-    if (scoped && projectId && scoped !== projectId) return { state: 'unresolved' };
-    if (this.repositories.failed()) return { state: 'unresolved' };
-    const listed = this.repositories.repositories();
-    if (listed === undefined) return { state: 'waiting' };
-    const repository = listed.find((candidate) => candidate.name === name);
+    const scopeNamesProject = !!this.scope?.scope().project;
+    if (!projectId) {
+      if (scopeNamesProject) return 'scope';
+      // No project anywhere: only a listing that already answers — a literal — can say anything.
+      return source.repositories() === undefined ? 'none' : 'scope';
+    }
+    if (scoped === projectId) return 'scope';
+    // The address names a project the project list has not resolved yet: it may be this one, and
+    // then the scoped listing answers without a second request.
+    if (
+      scopeNamesProject &&
+      scoped === undefined &&
+      this.projects?.projects() === undefined &&
+      !this.projects?.failed()
+    ) {
+      return 'waiting';
+    }
+    return 'lookup';
+  });
+
+  /** The project asked of the lookup, if any — a string, so the read below runs once per project. */
+  private readonly lookupProjectId = computed(() =>
+    this.route() === 'lookup' ? this.coordinates().repository?.projectId : undefined,
+  );
+
+  /** The looked-up listing, held here so a failed read is retried by the next preview, not this one. */
+  private readonly lookedUp = computed(() => {
+    const projectId = this.lookupProjectId();
+    return projectId ? untracked(() => this.lookup.repositories(projectId)) : undefined;
+  });
+
+  private readonly listing = computed<QitsProjectRepositories | 'waiting' | null>(() => {
+    switch (this.route()) {
+      case 'none':
+        return null;
+      case 'waiting':
+        return 'waiting';
+      case 'lookup':
+        return this.lookedUp()?.() ?? null;
+      default:
+        return {
+          repositories: this.repositories?.repositories(),
+          failed: this.repositories?.failed() ?? false,
+        };
+    }
+  });
+
+  private readonly target = computed<Target>(() => {
+    const name = this.coordinates().repository?.name;
+    if (!name) return { state: 'unresolved' };
+    const listing = this.listing();
+    if (listing === null || (listing !== 'waiting' && listing.failed)) {
+      return { state: 'unresolved' };
+    }
+    if (listing === 'waiting' || listing.repositories === undefined) return { state: 'waiting' };
+    const repository = listing.repositories.find((candidate) => candidate.name === name);
     return repository ? { state: 'resolved', repository } : { state: 'unresolved' };
   });
 
