@@ -1,0 +1,18 @@
+{
+  "coordinates": {
+    "language": "typescript",
+    "tool": "vitest",
+    "repository": { "projectId": "p-qits", "name": "qits-ui-components-jslib" },
+    "commitSha": "9a1b2c3d4e5f60718293a4b5c6d7e8f901234567",
+    "file": "projects/qits-spa-ui-components/src/lib/run-reports.spec.ts",
+    "className": "QitsRunReports > fallbacks",
+    "testName": "says not reported when the run has none",
+    "lineStart": 120,
+    "lineEnd": 134
+  },
+  "shape": "TIMEOUT",
+  "failureType": "Error",
+  "message": "Test timed out in 5000ms.",
+  "stackTrace": null,
+  "durationMs": 5002
+}

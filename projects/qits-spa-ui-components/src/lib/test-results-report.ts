@@ -12,6 +12,8 @@ import {
 } from '@angular/core';
 
 import { formatElapsed } from './duration';
+import { declaredInputs } from './failures/declared-inputs';
+import { QitsFailureInsightsArea } from './failures/failure-insights-area';
 import type { QitsReport, QitsReportContext } from './reports';
 
 /** The `test-results` kind's wire name. */
@@ -82,14 +84,22 @@ export interface QitsTestResultsPayload {
 
 /**
  * **The extension point for qits-755's code preview**, part one: a component drawn inside every
- * expanded failure, through `NgComponentOutlet`, with two inputs — `coordinates:
- * QitsTestCoordinates` and `context: QitsReportContext`. Nothing is drawn while none is provided.
+ * expanded failure — and only there, so nothing it reads is read for a closed list — through
+ * `NgComponentOutlet`, with up to three inputs, each handed over only if the component declares it:
+ * `coordinates: QitsTestCoordinates`, `failure: QitsTestFailure` (the whole failure — its shape,
+ * type and message, which classifying it needs) and `context: QitsReportContext`.
+ *
+ * **Filled by default with `<qits-failure-insights>`** ({@link QitsFailureInsightsArea}), which
+ * classifies the failure and draws every insight registered for it — the test's code, with
+ * `provideQitsStandardFailureInsights()`. A provider of this token replaces that area; a preview
+ * that wants both draws `<qits-failure-insights>` itself.
  *
  * A token rather than only an output because this view is itself rendered through the report
  * area's outlet, where no host can bind an output; a provider reaches it wherever it is drawn.
  */
 export const QITS_TEST_FAILURE_PREVIEW = new InjectionToken<Type<unknown>>(
   'QITS_TEST_FAILURE_PREVIEW',
+  { providedIn: 'root', factory: () => QitsFailureInsightsArea },
 );
 
 function firstLineOf(text: string | null | undefined): string {
@@ -186,10 +196,7 @@ function count(value: unknown): number {
                   }
                   @if (preview) {
                     <ng-container
-                      *ngComponentOutlet="
-                        preview;
-                        inputs: { coordinates: failure.coordinates, context: context() }
-                      "
+                      *ngComponentOutlet="preview; inputs: previewInputs(failure, preview)"
                     />
                   }
                 </td>
@@ -291,6 +298,21 @@ export class QitsTestResultsReport {
   readonly failureOpened = output<QitsTestCoordinates>();
 
   protected readonly preview = inject(QITS_TEST_FAILURE_PREVIEW, { optional: true });
+
+  /**
+   * What the slot hands the preview, narrowed to the inputs it declares — so a preview written
+   * against qits-990's two inputs keeps working beside the area that takes the whole failure.
+   */
+  protected previewInputs(
+    failure: QitsTestFailure,
+    preview: Type<unknown>,
+  ): Record<string, unknown> {
+    return declaredInputs(preview, {
+      coordinates: failure.coordinates,
+      failure,
+      context: this.context(),
+    });
+  }
   protected readonly expanded = signal<number | null>(null);
   protected readonly elapsed = formatElapsed;
   protected readonly firstLine = firstLineOf;

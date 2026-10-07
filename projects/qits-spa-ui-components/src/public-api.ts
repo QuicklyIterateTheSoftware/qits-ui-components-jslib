@@ -149,3 +149,42 @@ export type {
   QitsCoverageTotal,
   QitsCoverageUncovered,
 } from './lib/coverage-report';
+export {
+  classifyFailure,
+  provideQitsFailureClassifier,
+  QITS_FAILURE_CLASSIFIERS,
+  StandardFailureClassifier,
+} from './lib/failures/failure-kinds';
+export type { QitsFailureClassifier, QitsFailureKind } from './lib/failures/failure-kinds';
+export {
+  provideQitsFailureInsight,
+  QITS_FAILURE_ACTIONS,
+  QITS_FAILURE_INSIGHTS,
+} from './lib/failures/failure-insights';
+export type {
+  QitsFailureActionProvider,
+  QitsFailureInsightProvider,
+} from './lib/failures/failure-insights';
+export { QitsFailureInsightsArea } from './lib/failures/failure-insights-area';
+export {
+  highlighterFor,
+  JavaHighlighter,
+  provideQitsSyntaxHighlighter,
+  QITS_PLAIN_HIGHLIGHTER,
+  QITS_SYNTAX_HIGHLIGHTERS,
+  TypeScriptHighlighter,
+} from './lib/failures/syntax';
+export type { QitsCodeToken, QitsSyntaxHighlighter } from './lib/failures/syntax';
+export { QitsCodeExcerpt } from './lib/failures/code-excerpt';
+export {
+  QITS_GITHOST_REPOSITORIES_PATH,
+  QITS_SOURCE_FILE_MAX_BYTES,
+  QitsSourceFiles,
+} from './lib/failures/source-files';
+export type { QitsSourceFile, QitsSourceFileResponse } from './lib/failures/source-files';
+export {
+  QITS_CODE_PREVIEW_MAX_LINES,
+  QitsCodePreview,
+  QitsCodePreviewInsight,
+} from './lib/failures/code-preview-insight';
+export { provideQitsStandardFailureInsights } from './lib/failures/standard-failure-insights';

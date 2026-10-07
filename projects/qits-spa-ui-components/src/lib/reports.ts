@@ -12,6 +12,7 @@ import { map, Observable, switchMap } from 'rxjs';
 
 import { afterApiOrigin, QitsAppLinks } from './app-links';
 import { QITS_COVERAGE_KIND, QitsCoverageReport } from './coverage-report';
+import { provideQitsStandardFailureInsights } from './failures/standard-failure-insights';
 import { QITS_TEST_RESULTS_KIND, QitsTestResultsReport } from './test-results-report';
 
 /**
@@ -85,7 +86,8 @@ export interface QitsReportContext {
   readonly baseline: QitsReportBaseline | null;
   /**
    * qits-ci's origin as the navigation states it — `''` where it names none and the reads go
-   * same-origin. For a kind that has a further read of its own to make (qits-755's code preview).
+   * same-origin. For a kind that has a further read of its own to make on qits-ci; qits-755's code
+   * preview reads qits-githost instead, on that application's own origin.
    */
   readonly ciOrigin: string;
 }
@@ -123,6 +125,9 @@ export function provideQitsReportKind(kind: QitsReportKind): EnvironmentProvider
 /**
  * The first two kinds' views, registered together: `test-results` and `coverage`, payload version 1
  * of each. Both pages that host `<qits-run-reports>` provide this once.
+ *
+ * It brings `provideQitsStandardFailureInsights()` with it, so an opened failure in the test results
+ * shows its test code wherever the failure locates it.
  */
 export function provideQitsStandardReportKinds(): EnvironmentProviders {
   return makeEnvironmentProviders([
@@ -138,6 +143,7 @@ export function provideQitsStandardReportKinds(): EnvironmentProviders {
       title: 'Coverage',
       component: QitsCoverageReport,
     }),
+    provideQitsStandardFailureInsights(),
   ]);
 }
 

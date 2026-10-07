@@ -1,0 +1,18 @@
+{
+  "coordinates": {
+    "language": "java",
+    "tool": "failsafe",
+    "repository": { "projectId": "p-qits", "name": "qits-ci-service" },
+    "commitSha": "3f9c2e1a7b4d8e0f1a2b3c4d5e6f708192a3b4c5",
+    "file": "service/src/it/java/eu/wohlben/qits/ci/CiReportStoreIT.java",
+    "className": "eu.wohlben.qits.ci.CiReportStoreIT",
+    "testName": "replacesOnResubmit",
+    "lineStart": 41,
+    "lineEnd": 58
+  },
+  "shape": "ERROR",
+  "failureType": "java.lang.IllegalStateException",
+  "message": "duplicate key value violates unique constraint \"ci_report_run_step_kind\"",
+  "stackTrace": "java.lang.IllegalStateException: duplicate key value violates unique constraint \"ci_report_run_step_kind\"\n\tat eu.wohlben.qits.ci.CiReportStore.put(CiReportStore.java:77)",
+  "durationMs": 410
+}

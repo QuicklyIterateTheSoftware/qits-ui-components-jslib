@@ -1,0 +1,18 @@
+{
+  "coordinates": {
+    "language": "typescript",
+    "tool": "vitest",
+    "repository": { "projectId": "p-qits", "name": "qits-ui-components-jslib" },
+    "commitSha": "9a1b2c3d4e5f60718293a4b5c6d7e8f901234567",
+    "file": "projects/qits-spa-ui-components/src/lib/builds.spec.ts",
+    "className": "provideQitsBuilds across origins",
+    "testName": "beforeAll",
+    "lineStart": null,
+    "lineEnd": null
+  },
+  "shape": "SETUP",
+  "failureType": "TypeError",
+  "message": "Cannot read properties of undefined (reading 'tree')",
+  "stackTrace": "TypeError: Cannot read properties of undefined (reading 'tree')\n    at builds.spec.ts:560:12",
+  "durationMs": null
+}

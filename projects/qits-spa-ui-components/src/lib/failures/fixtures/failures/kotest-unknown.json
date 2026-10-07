@@ -1,0 +1,18 @@
+{
+  "coordinates": {
+    "language": "kotlin",
+    "tool": "kotest",
+    "repository": { "projectId": "p-qits", "name": "qits-kotlin-service" },
+    "commitSha": "1234567890abcdef1234567890abcdef12345678",
+    "file": "src/test/kotlin/eu/wohlben/qits/KotlinSpec.kt",
+    "className": "eu.wohlben.qits.KotlinSpec",
+    "testName": "adds numbers",
+    "lineStart": 12,
+    "lineEnd": 15
+  },
+  "shape": "ASSERTION",
+  "failureType": "io.kotest.assertions.AssertionFailedError",
+  "message": "expected:<3> but was:<4>",
+  "stackTrace": null,
+  "durationMs": 8
+}

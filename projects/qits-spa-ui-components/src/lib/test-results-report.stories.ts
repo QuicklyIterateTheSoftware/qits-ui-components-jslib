@@ -1,5 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { applicationConfig, type Meta, type StoryObj } from '@storybook/angular-vite';
 
+import {
+  LOCATED_FAILURE,
+  STORY_CONTEXT,
+  STORY_TEST_FILE,
+  storyPlatform,
+} from './failures/failure-story-fixtures';
 import { ALL_GREEN, FAILING_TESTS, storyReport, VITEST_TIMEOUT } from './report-fixtures';
 import { QitsTestResultsReport } from './test-results-report';
 
@@ -27,7 +33,8 @@ type Story = StoryObj<QitsTestResultsReport>;
 /**
  * A java-service's QA run: surefire and failsafe side by side, one assertion, one error, and a
  * class-level `initializationError` whose file the parser could not resolve. Click a message to
- * open the whole message and the stack — that is where qits-755's code preview will appear.
+ * open the whole message and the stack. These failures name no lines yet, so no test code is
+ * shown under them; the next story's does.
  */
 export const JavaFailures: Story = { name: 'Java failures' };
 
@@ -52,5 +59,26 @@ export const AllGreen: Story = {
         tagSha: 'def5678',
       },
     },
+  },
+};
+
+/**
+ * A failure its locator placed, opened: under the message and the stack the insight area draws
+ * "Test code" — the failing test's lines, read from the git host at the run's commit (a fake one
+ * here), and a link to the same lines on its Code page.
+ */
+export const OpenedWithTestCode: Story = {
+  name: 'Opened, with its test code',
+  decorators: [
+    applicationConfig({
+      providers: storyPlatform({ kind: 'file', content: STORY_TEST_FILE }),
+    }),
+  ],
+  args: {
+    report: storyReport({ id: 'r-located', kind: 'test-results' }, LOCATED_FAILURE),
+    context: STORY_CONTEXT,
+  },
+  play: async ({ canvasElement }) => {
+    canvasElement.querySelector<HTMLButtonElement>('button.message')?.click();
   },
 };
