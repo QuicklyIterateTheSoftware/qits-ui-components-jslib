@@ -1,0 +1,24 @@
+{
+  "newPairs": [
+    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-edge-service" },
+    { "role": "PROVIDER", "consumer": "qits-projects-service", "provider": "qits-workspaces-service" }
+  ],
+  "removedPairs": [
+    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-githost-service" }
+  ],
+  "newInteractions": [
+    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-edge-service", "description": "listRoutes: lists the edge's routes", "providerStates": [] },
+    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-projects-service", "description": "createEntity: creates an entity", "providerStates": [ "a campaign exists", "a project exists" ] },
+    { "role": "PROVIDER", "consumer": "qits-landing-app", "provider": "qits-workspaces-service", "description": "stopWorkspace: stops a workspace", "providerStates": [ "a workspace is running" ] },
+    { "role": "PROVIDER", "consumer": "qits-projects-service", "provider": "qits-workspaces-service", "description": "startWorkspace: starts a stopped workspace", "providerStates": [ "a workspace is stopped" ] }
+  ],
+  "removedInteractions": [
+    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-githost-service", "description": "getBranch: reads a branch", "providerStates": [ "a repository exists" ] },
+    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-projects-service", "description": "listArchived: lists archived entities", "providerStates": [ "a project exists", "an archived project" ] }
+  ],
+  "changedInteractions": [
+    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-projects-service", "description": "getProject: reads a project", "providerStates": [ "a project exists" ] }
+  ],
+  "newStates": [ "a workspace is stopped" ],
+  "removedStates": [ "an archived workspace" ]
+}

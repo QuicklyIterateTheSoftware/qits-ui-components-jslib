@@ -149,6 +149,23 @@ export type {
   QitsCoverageTotal,
   QitsCoverageUncovered,
 } from './lib/coverage-report';
+export { QITS_CONTRACTS_REPORT_KIND, QitsContractsReport } from './lib/contracts-report';
+export { QITS_CONTRACTS_KIND, readContractsPayload } from './lib/contracts-report.types';
+export type {
+  QitsContractChanges,
+  QitsContractInteraction,
+  QitsContractPair,
+  QitsContractRole,
+  QitsContractsPayload,
+  QitsContractSides,
+  QitsContractSource,
+  QitsInteractionEntry,
+  QitsPactEntry,
+  QitsProviderState,
+  QitsProviderStates,
+  QitsSkippedFile,
+} from './lib/contracts-report.types';
+export { contractChanges, qitsInteractionKey, qitsPairKey } from './lib/contracts-diff';
 export {
   classifyFailure,
   provideQitsFailureClassifier,

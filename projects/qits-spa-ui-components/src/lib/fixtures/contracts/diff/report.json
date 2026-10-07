@@ -1,0 +1,65 @@
+{
+  "sources": [
+    { "language": "json", "tool": "pact", "file": "pacts/qits-workspaces-service_qits-edge-service.json", "format": "pact-v4" },
+    { "language": "json", "tool": "pact", "file": "pacts/qits-workspaces-service_qits-projects-service.json", "format": "pact-v4" },
+    { "language": "java", "tool": "pact-jvm", "file": ".qits-reports/pact-verification/qits-workspaces-service.json", "format": "pact-jvm-json-report" },
+    { "language": "json", "tool": "qits-golden-masters", "file": "golden-masters/index.json", "format": "golden-master-index-v1" }
+  ],
+  "sides": { "consumer": true, "provider": true, "providerStates": true },
+  "providerStates": {
+    "provider": "qits-workspaces",
+    "states": [
+      { "name": "a workspace is running", "operations": [ "getWorkspace", "stopWorkspace" ] },
+      { "name": "a workspace is stopped", "operations": [ "startWorkspace" ] }
+    ]
+  },
+  "pacts": [
+    {
+      "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-edge-service", "specification": "4.0",
+      "source": "pacts/qits-workspaces-service_qits-edge-service.json",
+      "interactions": [
+        { "description": "listRoutes: lists the edge's routes", "providerStates": [],
+          "type": "Synchronous/HTTP", "method": "GET", "path": "/edge/api/routes", "status": 200,
+          "contentHash": "sha256:6666666666666666666666666666666666666666666666666666666666666666", "verified": null }
+      ]
+    },
+    {
+      "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-projects-service", "specification": "4.0",
+      "source": "pacts/qits-workspaces-service_qits-projects-service.json",
+      "interactions": [
+        { "description": "createEntity: creates an entity", "providerStates": [ "a project exists", "a campaign exists" ],
+          "type": "Synchronous/HTTP", "method": "POST", "path": "/projects/api/projects/qits/entities", "status": 201,
+          "contentHash": "sha256:7777777777777777777777777777777777777777777777777777777777777777", "verified": null },
+        { "description": "getProject: reads a project", "providerStates": [ "a project exists" ],
+          "type": "Synchronous/HTTP", "method": "GET", "path": "/projects/api/projects/qits", "status": 200,
+          "contentHash": "sha256:2222222222222222222222222222222222222222222222222222222222220000", "verified": null },
+        { "description": "listEntities: lists a project's entities", "providerStates": [ "a project exists" ],
+          "type": "Synchronous/HTTP", "method": "GET", "path": "/projects/api/projects/qits/entities", "status": 200,
+          "contentHash": "sha256:4444444444444444444444444444444444444444444444444444444444444444", "verified": null }
+      ]
+    },
+    {
+      "role": "PROVIDER", "consumer": "qits-landing-app", "provider": "qits-workspaces-service", "specification": "4.0",
+      "source": ".qits-reports/pact-verification/qits-workspaces-service.json",
+      "interactions": [
+        { "description": "getWorkspace: reads a workspace", "providerStates": [ "a workspace is running" ],
+          "type": "Synchronous/HTTP", "method": "GET", "path": "/workspaces/api/workspaces/w-1", "status": 200,
+          "contentHash": "sha256:5555555555555555555555555555555555555555555555555555555555555555", "verified": "OK" },
+        { "description": "stopWorkspace: stops a workspace", "providerStates": [ "a workspace is running" ],
+          "type": "Synchronous/HTTP", "method": "POST", "path": "/workspaces/api/workspaces/w-1/stop", "status": 202,
+          "contentHash": "sha256:8888888888888888888888888888888888888888888888888888888888888888", "verified": "FAILED" }
+      ]
+    },
+    {
+      "role": "PROVIDER", "consumer": "qits-projects-service", "provider": "qits-workspaces-service", "specification": "4.0",
+      "source": ".qits-reports/pact-verification/qits-workspaces-service.json",
+      "interactions": [
+        { "description": "startWorkspace: starts a stopped workspace", "providerStates": [ "a workspace is stopped" ],
+          "type": "Synchronous/HTTP", "method": "POST", "path": "/workspaces/api/workspaces/w-1/start", "status": 202,
+          "contentHash": "sha256:9999999999999999999999999999999999999999999999999999999999999999", "verified": "OK" }
+      ]
+    }
+  ],
+  "skipped": [ { "file": "pacts/broken.json", "reason": "not a pact: no consumer" } ],
+  "truncated": false
+}

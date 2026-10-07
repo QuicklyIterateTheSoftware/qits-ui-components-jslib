@@ -16,30 +16,30 @@ A fourth read hangs off the same rule and is opt-in: the pending-builds bolt ask
 building, and keeps that count current off the platform's event stream whether or not anybody has
 opened the panel over it.
 
-| Component        | Selector             | What it is                                                                                                                                                                                                                      |
-| ---------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `QitsButton`     | `<qits-button>`      | The button. `variant` (`primary`/`secondary`/`ghost`), `size` (`sm`/`md`/`lg`), `type`, `disabled`, `busy`; emits `pressed`.                                                                                                     |
-| `QitsBadge`      | `<qits-badge>`       | A short status word. Required `label`, semantic `tone` (`neutral`/`info`/`success`/`warning`/`danger`/`highlight`).                                                                                                                          |
-| `QitsCard`       | `<qits-card>`        | A titled surface. `heading`, `subheading`, `elevated`; projects into the body, and `[qitsCardActions]` into the header.                                                                                                          |
-| `QitsPicker`     | `<qits-picker>`      | Pick one of a list. Required `options` (`{ value: T, label: string }[]`), two-way `value` of `T \| undefined`; `compareWith`, `placeholder`, `disabled`.                                                                         |
-| `QitsMainLayout` | `<qits-main-layout>` | The application skeleton: the project picker, the pending-builds bolt beside it, the nested sidebar, and the `<router-outlet />` the app's child routes render into. `brand` is the top-left fallback; `links` an override in the flat shape. |
-| `QitsNavSubmenu` | `[qitsNavSubmenu]`   | Marks an `<ng-template>` as the sub-menu under the current navigation row. The layout gives it a box; the app styles what goes in it.                                                                                            |
-| `QitsDiffViewer` | `<qits-diff-viewer>` | A file's unified diff, coloured by line. `patch` is git's own text and `path` the file it is of; it renders, it never fetches.                                                                                                   |
-| `QitsChangeTree` | `<qits-change-tree>` | The files a change set touches, as a tree. `entries` (`{ path, previousPath, changeType }[]`), two-way `selected`, `label`. Single-child directory chains fold into one row.                                                     |
-| `QitsStepProgress` | `<qits-step-progress>` | A pipeline's steps as a segmented track: one bubble per planned step, each filling against **its own** expected duration with its actual/expected beside it. Required `steps` (`{ expectedMillis, startedAt?, finishedAt? }[]`), `label`. |
-| `QitsRunReports` | `<qits-run-reports>` | A CI run's release reports: every highlight in one strip, then one collapsible section per report drawn by the view its kind registered. Required `runId`; `reload()` when the run finishes. Reads qits-ci itself — see _Release reports_. |
+| Component          | Selector               | What it is                                                                                                                                                                                                                                    |
+| ------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `QitsButton`       | `<qits-button>`        | The button. `variant` (`primary`/`secondary`/`ghost`), `size` (`sm`/`md`/`lg`), `type`, `disabled`, `busy`; emits `pressed`.                                                                                                                  |
+| `QitsBadge`        | `<qits-badge>`         | A short status word. Required `label`, semantic `tone` (`neutral`/`info`/`success`/`warning`/`danger`/`highlight`).                                                                                                                           |
+| `QitsCard`         | `<qits-card>`          | A titled surface. `heading`, `subheading`, `elevated`; projects into the body, and `[qitsCardActions]` into the header.                                                                                                                       |
+| `QitsPicker`       | `<qits-picker>`        | Pick one of a list. Required `options` (`{ value: T, label: string }[]`), two-way `value` of `T \| undefined`; `compareWith`, `placeholder`, `disabled`.                                                                                      |
+| `QitsMainLayout`   | `<qits-main-layout>`   | The application skeleton: the project picker, the pending-builds bolt beside it, the nested sidebar, and the `<router-outlet />` the app's child routes render into. `brand` is the top-left fallback; `links` an override in the flat shape. |
+| `QitsNavSubmenu`   | `[qitsNavSubmenu]`     | Marks an `<ng-template>` as the sub-menu under the current navigation row. The layout gives it a box; the app styles what goes in it.                                                                                                         |
+| `QitsDiffViewer`   | `<qits-diff-viewer>`   | A file's unified diff, coloured by line. `patch` is git's own text and `path` the file it is of; it renders, it never fetches.                                                                                                                |
+| `QitsChangeTree`   | `<qits-change-tree>`   | The files a change set touches, as a tree. `entries` (`{ path, previousPath, changeType }[]`), two-way `selected`, `label`. Single-child directory chains fold into one row.                                                                  |
+| `QitsStepProgress` | `<qits-step-progress>` | A pipeline's steps as a segmented track: one bubble per planned step, each filling against **its own** expected duration with its actual/expected beside it. Required `steps` (`{ expectedMillis, startedAt?, finishedAt? }[]`), `label`.     |
+| `QitsRunReports`   | `<qits-run-reports>`   | A CI run's release reports: every highlight in one strip, then one collapsible section per report drawn by the view its kind registered. Required `runId`; `reload()` when the run finishes. Reads qits-ci itself — see _Release reports_.    |
 
 ## Release reports
 
-A release request's QA run submits structured **reports** to qits-ci — `test-results` and
-`coverage` today, more kinds later — and `<qits-run-reports>` is the one area both pages draw them
+A release request's QA run submits structured **reports** to qits-ci — `test-results`,
+`coverage` and `contracts` today, more kinds later — and `<qits-run-reports>` is the one area both pages draw them
 in. It is the second component here that reads for itself, on the bolt's terms: qits-ci's own origin
 (`QitsAppLinks.apiOrigin('qits-ci')`), after the navigation has said where that is, with
 `withCredentials`. `QitsReportsClient` is the whole of that door — the summaries, one report, the
 baseline, and the baseline's reports of a kind — and a story or a spec replaces it with a literal.
 
 ```ts
-providers: [provideQitsStandardReportKinds()] // test-results v1 + coverage v1
+providers: [provideQitsStandardReportKinds()]; // test-results v1 + coverage v1 + contracts v1
 ```
 
 ```html
@@ -63,6 +63,12 @@ The test-results view leaves qits-755 its seam twice: the `failureOpened` output
 `coordinates`) for a host drawing the view itself, and `QITS_TEST_FAILURE_PREVIEW`, a component
 drawn inside every opened failure with `coordinates` and `context`, for inside the area, where no
 host can bind an output.
+
+The contracts view (qits-759) computes what is new in the browser: `contractChanges(report,
+baseline)` is a pure function with the CLI's identity rules — a state by name, a pair by role,
+consumer and provider, an interaction by pair, description and sorted state names, "changed" by
+`contentHash` — and a side either report did not read is never compared. Its spec asserts the CLI's
+own shared fixture (`src/lib/fixtures/contracts/diff/`, copied verbatim), so the two cannot drift.
 
 ## A diff is rendered, never fetched
 
@@ -202,13 +208,52 @@ edge answers with slots — one entry per application, filed under where it belo
   "origin": "https://dev.example.com",
   "projectOrigin": "https://dev.example.com",
   "slots": {
-    "system": [{ "app": "qits-projects", "label": "Overview", "host": "projects", "path": "/projects", "origin": "https://projects.dev.example.com", "position": 1 }],
-    "platform": [{ "app": "qits-platform-events", "label": "Events", "host": "events", "path": "/events", "origin": "https://events.dev.example.com", "position": 1 }],
-    "project.detail": [{ "app": "qits-workspaces", "label": "Workspaces", "host": "workspaces", "path": "/workspaces", "origin": "https://workspaces.dev.example.com", "position": 1 }],
-    "services.details": [{ "app": "qits-ci", "label": "CI", "host": null, "path": "/ci", "origin": "https://dev.example.com", "position": 2 }]
+    "system": [
+      {
+        "app": "qits-projects",
+        "label": "Overview",
+        "host": "projects",
+        "path": "/projects",
+        "origin": "https://projects.dev.example.com",
+        "position": 1
+      }
+    ],
+    "platform": [
+      {
+        "app": "qits-platform-events",
+        "label": "Events",
+        "host": "events",
+        "path": "/events",
+        "origin": "https://events.dev.example.com",
+        "position": 1
+      }
+    ],
+    "project.detail": [
+      {
+        "app": "qits-workspaces",
+        "label": "Workspaces",
+        "host": "workspaces",
+        "path": "/workspaces",
+        "origin": "https://workspaces.dev.example.com",
+        "position": 1
+      }
+    ],
+    "services.details": [
+      {
+        "app": "qits-ci",
+        "label": "CI",
+        "host": null,
+        "path": "/ci",
+        "origin": "https://dev.example.com",
+        "position": 2
+      }
+    ]
   },
   "applications": {
-    "qits-projects": { "apiDocs": "/projects/q/swagger-ui", "origin": "https://projects.dev.example.com" }
+    "qits-projects": {
+      "apiDocs": "/projects/q/swagger-ui",
+      "origin": "https://projects.dev.example.com"
+    }
   }
 }
 ```
@@ -252,11 +297,11 @@ storage, deliberately. A remembered pick would make the same URL render differen
 and would silently re-scope a page opened from a bookmark. `routing` says how deep this
 application's own addresses go:
 
-| `routing`      | the applications                            | what a pick does                           |
-| -------------- | ------------------------------------------- | ------------------------------------------ |
-| `'repository'` | ci, docs, artifacts, configuration, workspaces | goes to `/<slug>` on this host           |
-| `'project'`    | events, deployments, observability, maintenance | goes to `/<slug>` on this host          |
-| `'system'`     | mirror, orchestrator, system, githost       | **leaves** for the projects host           |
+| `routing`      | the applications                                | what a pick does                 |
+| -------------- | ----------------------------------------------- | -------------------------------- |
+| `'repository'` | ci, docs, artifacts, configuration, workspaces  | goes to `/<slug>` on this host   |
+| `'project'`    | events, deployments, observability, maintenance | goes to `/<slug>` on this host   |
+| `'system'`     | mirror, orchestrator, system, githost           | **leaves** for the projects host |
 
 A system app is about the platform rather than about a project, so `/<slug>/` is not an address it
 serves; leaving is the honest answer to a pick it cannot act on itself. The router's form carries
@@ -295,10 +340,10 @@ appLinks.apiUrl('qits-projects', '/projects/api/projects'); // the same, joined 
 await appLinks.whenApiUrl('qits-projects', '/projects/api/projects'); // waits for the navigation
 ```
 
-| `apiOrigin(app)` | means                                                         | the caller           |
-| ---------------- | ------------------------------------------------------------- | -------------------- |
-| `undefined`      | the navigation has not answered yet                           | **waits**            |
-| an origin        | the application's own, no trailing slash                      | calls it, with credentials |
+| `apiOrigin(app)` | means                                                                 | the caller                       |
+| ---------------- | --------------------------------------------------------------------- | -------------------------------- |
+| `undefined`      | the navigation has not answered yet                                   | **waits**                        |
+| an origin        | the application's own, no trailing slash                              | calls it, with credentials       |
 | `''`             | answered (or failed) with no origin for it, or no navigation provided | calls the bare path, same-origin |
 
 `apiOrigin`/`apiUrl` read a signal, so inside a `computed` or `effect` they re-run when the answer
@@ -482,17 +527,17 @@ a click outside itself.
 
 **The bolt itself says four things, in colour, in a number and in words.**
 
-| state              | the bolt                                | the badge   | `aria-label`                        |
-| ------------------ | --------------------------------------- | ----------- | ----------------------------------- |
-| something building | amber `#d97706`                         | the queue   | `Pending builds: 3 running, 2 queued` |
-| nothing building   | the button's grey `#6b7280`             | none        | `Pending builds: none`              |
-| the read failed    | hollow — `fill: none`, stroked, faded   | none        | `Pending builds: unavailable`       |
-| nothing yet        | the resting grey, quietly               | none        | `Pending builds: checking`          |
+| state              | the bolt                              | the badge | `aria-label`                          |
+| ------------------ | ------------------------------------- | --------- | ------------------------------------- |
+| something building | amber `#d97706`                       | the queue | `Pending builds: 3 running, 2 queued` |
+| nothing building   | the button's grey `#6b7280`           | none      | `Pending builds: none`                |
+| the read failed    | hollow — `fill: none`, stroked, faded | none      | `Pending builds: unavailable`         |
+| nothing yet        | the resting grey, quietly             | none      | `Pending builds: checking`            |
 
-*Pending* is the active listing being non-empty — there is no threshold and no status to consult.
+_Pending_ is the active listing being non-empty — there is no threshold and no status to consult.
 The amber is the **bolt's own** fill rather than a fourth colour on the button, because hovering a
 busy bolt would otherwise repaint it and quietly un-say the thing it exists to say. A failed read is
-drawn as visibly *unanswered* rather than grey, so that grey keeps meaning "we asked, and nothing is
+drawn as visibly _unanswered_ rather than grey, so that grey keeps meaning "we asked, and nothing is
 building"; and "checking" is allowed to look like rest but is never reported as idle, since the
 label is the only channel a screen reader has — neither the fill nor the badge is announced.
 
@@ -530,7 +575,7 @@ a quieter tone and stops there, never consuming the next one's. Beside each bubb
 <expected>` for a step that has started and just `<expected>` for one that has not.
 
 That per-step rule is the change. The bar used to draw the seams at each step's predicted share and
-then fill the *whole track* from wall-clock elapsed against the predicted *total*, which is exactly
+then fill the _whole track_ from wall-clock elapsed against the predicted _total_, which is exactly
 backwards from what a segmented bar appears to promise: a step that overran eclipsed the following
 seams, and a step that finished early left the next segment filling before that step had started.
 The seams were real boundaries of a prediction, drawn as if they were boundaries of the build.

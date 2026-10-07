@@ -1,0 +1,53 @@
+{
+  "sources": [
+    { "language": "json", "tool": "pact", "file": "pacts/qits-workspaces-service_qits-githost-service.json", "format": "pact-v4" },
+    { "language": "json", "tool": "pact", "file": "pacts/qits-workspaces-service_qits-projects-service.json", "format": "pact-v4" },
+    { "language": "java", "tool": "pact-jvm", "file": ".qits-reports/pact-verification/qits-workspaces-service.json", "format": "pact-jvm-json-report" },
+    { "language": "json", "tool": "qits-golden-masters", "file": "golden-masters/index.json", "format": "golden-master-index-v1" }
+  ],
+  "sides": { "consumer": true, "provider": true, "providerStates": true },
+  "providerStates": {
+    "provider": "qits-workspaces",
+    "states": [
+      { "name": "a workspace is running", "operations": [ "getWorkspace" ] },
+      { "name": "an archived workspace", "operations": [ "listArchivedWorkspaces" ] }
+    ]
+  },
+  "pacts": [
+    {
+      "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-githost-service", "specification": "4.0",
+      "source": "pacts/qits-workspaces-service_qits-githost-service.json",
+      "interactions": [
+        { "description": "getBranch: reads a branch", "providerStates": [ "a repository exists" ],
+          "type": "Synchronous/HTTP", "method": "GET", "path": "/githost/api/repositories/qits/branches/main", "status": 200,
+          "contentHash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "verified": null }
+      ]
+    },
+    {
+      "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-projects-service", "specification": "4.0",
+      "source": "pacts/qits-workspaces-service_qits-projects-service.json",
+      "interactions": [
+        { "description": "getProject: reads a project", "providerStates": [ "a project exists" ],
+          "type": "Synchronous/HTTP", "method": "GET", "path": "/projects/api/projects/qits", "status": 200,
+          "contentHash": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "verified": null },
+        { "description": "listArchived: lists archived entities", "providerStates": [ "an archived project", "a project exists" ],
+          "type": "Synchronous/HTTP", "method": "GET", "path": "/projects/api/projects/qits/entities?archived=true", "status": 200,
+          "contentHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333", "verified": null },
+        { "description": "listEntities: lists a project's entities", "providerStates": [ "a project exists" ],
+          "type": "Synchronous/HTTP", "method": "GET", "path": "/projects/api/projects/qits/entities", "status": 200,
+          "contentHash": "sha256:4444444444444444444444444444444444444444444444444444444444444444", "verified": null }
+      ]
+    },
+    {
+      "role": "PROVIDER", "consumer": "qits-landing-app", "provider": "qits-workspaces-service", "specification": "4.0",
+      "source": ".qits-reports/pact-verification/qits-workspaces-service.json",
+      "interactions": [
+        { "description": "getWorkspace: reads a workspace", "providerStates": [ "a workspace is running" ],
+          "type": "Synchronous/HTTP", "method": "GET", "path": "/workspaces/api/workspaces/w-1", "status": 200,
+          "contentHash": "sha256:5555555555555555555555555555555555555555555555555555555555555555", "verified": "OK" }
+      ]
+    }
+  ],
+  "skipped": [],
+  "truncated": false
+}

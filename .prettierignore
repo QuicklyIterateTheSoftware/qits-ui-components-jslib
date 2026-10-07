@@ -1,2 +1,4 @@
 # Recorded inputs the specs read byte for byte; a formatter must not touch them.
 projects/qits-spa-ui-components/src/lib/failures/fixtures/
+# The contracts diff fixtures are copied verbatim from qits-platform-access-cli; byte-identical is the point.
+projects/qits-spa-ui-components/src/lib/fixtures/contracts/diff/
