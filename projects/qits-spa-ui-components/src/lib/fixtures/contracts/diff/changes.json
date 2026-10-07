@@ -1,24 +1,105 @@
 {
   "newPairs": [
-    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-edge-service" },
-    { "role": "PROVIDER", "consumer": "qits-projects-service", "provider": "qits-workspaces-service" }
+    {
+      "role": "CONSUMER",
+      "consumer": "qits-fx-service",
+      "provider": "qits-events-service"
+    },
+    {
+      "role": "PROVIDER",
+      "consumer": "qits-workspaces-service",
+      "provider": "qits-fx-service"
+    }
   ],
   "removedPairs": [
-    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-githost-service" }
+    {
+      "role": "CONSUMER",
+      "consumer": "qits-fx-service",
+      "provider": "qits-githost-service"
+    }
   ],
   "newInteractions": [
-    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-edge-service", "description": "listRoutes: lists the edge's routes", "providerStates": [] },
-    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-projects-service", "description": "createEntity: creates an entity", "providerStates": [ "a campaign exists", "a project exists" ] },
-    { "role": "PROVIDER", "consumer": "qits-landing-app", "provider": "qits-workspaces-service", "description": "stopWorkspace: stops a workspace", "providerStates": [ "a workspace is running" ] },
-    { "role": "PROVIDER", "consumer": "qits-projects-service", "provider": "qits-workspaces-service", "description": "startWorkspace: starts a stopped workspace", "providerStates": [ "a workspace is stopped" ] }
+    {
+      "role": "CONSUMER",
+      "consumer": "qits-fx-service",
+      "provider": "qits-events-service",
+      "description": "closeLedger: publish",
+      "providerStates": [
+        "a stream exists"
+      ]
+    },
+    {
+      "role": "CONSUMER",
+      "consumer": "qits-fx-service",
+      "provider": "qits-projects-service",
+      "description": "openLedger: getProject",
+      "providerStates": [
+        "a project exists",
+        "a signed-in user"
+      ]
+    },
+    {
+      "role": "PROVIDER",
+      "consumer": "qits-landing-app",
+      "provider": "qits-fx-service",
+      "description": "show-ledgers: getLedger",
+      "providerStates": [
+        "one ledger"
+      ]
+    },
+    {
+      "role": "PROVIDER",
+      "consumer": "qits-workspaces-service",
+      "provider": "qits-fx-service",
+      "description": "captureWorkspace: listLedgers",
+      "providerStates": [
+        "a signed-in user",
+        "two ledgers"
+      ]
+    }
   ],
   "removedInteractions": [
-    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-githost-service", "description": "getBranch: reads a branch", "providerStates": [ "a repository exists" ] },
-    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-projects-service", "description": "listArchived: lists archived entities", "providerStates": [ "a project exists", "an archived project" ] }
+    {
+      "role": "CONSUMER",
+      "consumer": "qits-fx-service",
+      "provider": "qits-githost-service",
+      "description": "countLines: listLoc",
+      "providerStates": [
+        "a repository with counted lines"
+      ]
+    },
+    {
+      "role": "CONSUMER",
+      "consumer": "qits-fx-service",
+      "provider": "qits-projects-service",
+      "description": "openLedger: createRepository",
+      "providerStates": [
+        "a project exists"
+      ]
+    },
+    {
+      "role": "PROVIDER",
+      "consumer": "qits-landing-app",
+      "provider": "qits-fx-service",
+      "description": "show-ledgers: deleteLedger",
+      "providerStates": [
+        "two ledgers"
+      ]
+    }
   ],
   "changedInteractions": [
-    { "role": "CONSUMER", "consumer": "qits-workspaces-service", "provider": "qits-projects-service", "description": "getProject: reads a project", "providerStates": [ "a project exists" ] }
+    {
+      "role": "CONSUMER",
+      "consumer": "qits-fx-service",
+      "provider": "qits-projects-service",
+      "description": "closeLedger: listProjects",
+      "providerStates": []
+    }
   ],
-  "newStates": [ "a workspace is stopped" ],
-  "removedStates": [ "an archived workspace" ]
+  "newStates": [
+    "one ledger"
+  ],
+  "removedStates": [
+    "a closed ledger"
+  ]
 }

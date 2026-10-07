@@ -3,7 +3,7 @@
     {
       "language": "json",
       "tool": "pact",
-      "file": "pacts/qits-fx-service_qits-events-service.json",
+      "file": "pacts/qits-fx-service_qits-githost-service.json",
       "format": "pact-v4"
     },
     {
@@ -34,7 +34,7 @@
     "provider": "qits-fx",
     "states": [
       {
-        "name": "one ledger",
+        "name": "a closed ledger",
         "operations": [
           "getLedger"
         ]
@@ -52,20 +52,20 @@
     {
       "role": "CONSUMER",
       "consumer": "qits-fx-service",
-      "provider": "qits-events-service",
+      "provider": "qits-githost-service",
       "specification": "4.0",
-      "source": "pacts/qits-fx-service_qits-events-service.json",
+      "source": "pacts/qits-fx-service_qits-githost-service.json",
       "interactions": [
         {
-          "description": "closeLedger: publish",
+          "description": "countLines: listLoc",
           "providerStates": [
-            "a stream exists"
+            "a repository with counted lines"
           ],
           "type": "Synchronous/HTTP",
-          "method": "POST",
-          "path": "/events/api/streams/ledgers",
-          "status": 202,
-          "contentHash": "sha256:ece893d68b4d2bb97eaeb435291eb6b8bf39d987d423166c0f3bac8a27731926",
+          "method": "GET",
+          "path": "/githost/api/loc",
+          "status": 200,
+          "contentHash": "sha256:0300e6741e6bace5f76b68da9862ec2ffe57105916757a61d39fe660a5d15392",
           "verified": null
         }
       ]
@@ -96,20 +96,19 @@
           "method": "GET",
           "path": "/projects/api/projects",
           "status": 200,
-          "contentHash": "sha256:feebd7dd7f2d2d7e6d1d43ba40055bab93d915556149ef74e4ebaf3170be2b4d",
+          "contentHash": "sha256:08e684543c8a95fc0cad4658858ba09215121ea116ae4e1f743d45333d9c84c2",
           "verified": null
         },
         {
-          "description": "openLedger: getProject",
+          "description": "openLedger: createRepository",
           "providerStates": [
-            "a project exists",
-            "a signed-in user"
+            "a project exists"
           ],
           "type": "Synchronous/HTTP",
-          "method": "GET",
-          "path": "/projects/api/projects/p-1",
-          "status": 200,
-          "contentHash": "sha256:b02cf1debe3c7504eedf2e4a23fff2793d6703ee6f2ebe59d40d10ae9d54eff8",
+          "method": "POST",
+          "path": "/projects/api/repositories",
+          "status": 201,
+          "contentHash": "sha256:aa23d66dabeedec09eeddaf5609cc5e9b3345ba347a7e3768ebbf27acf43b800",
           "verified": null
         }
       ]
@@ -122,16 +121,16 @@
       "source": ".qits-reports/pact-verification/qits-fx-service.json",
       "interactions": [
         {
-          "description": "show-ledgers: getLedger",
+          "description": "show-ledgers: deleteLedger",
           "providerStates": [
-            "one ledger"
+            "two ledgers"
           ],
           "type": "Synchronous/HTTP",
-          "method": "GET",
+          "method": "DELETE",
           "path": "/fx/api/ledgers/l-1",
-          "status": 200,
-          "contentHash": "sha256:2996518bafdbcea09be99a88d30ad7016c3389fb3e12b674f8c753e367218abe",
-          "verified": "FAILED"
+          "status": 204,
+          "contentHash": "sha256:911204033c5b166d51f55cac52fa1146dec47c24a18eeef315f2dd39e1d2be9c",
+          "verified": "OK"
         },
         {
           "description": "show-ledgers: listLedgers",
@@ -157,8 +156,7 @@
         {
           "description": "captureWorkspace: listLedgers",
           "providerStates": [
-            "two ledgers",
-            "a signed-in user"
+            "two ledgers"
           ],
           "type": "Synchronous/HTTP",
           "method": "GET",

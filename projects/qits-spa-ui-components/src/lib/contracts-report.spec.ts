@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 
 import { QITS_CONTRACTS_REPORT_KIND, QitsContractsReport } from './contracts-report';
 import {
+  BASELINE_PROVIDER_ABSENT,
   FULL_DIFF,
   NO_BASELINE,
   PROVIDER_ABSENT,
@@ -80,29 +81,27 @@ describe('QitsContractsReport', () => {
     expect(has(fixture, '.no-baseline')).toBe(false);
 
     expect(texts(fixture, '.new .new-pair')).toEqual([
-      'consumer qits-workspaces-service → qits-edge-service',
-      'provider qits-projects-service → qits-workspaces-service',
+      'consumer qits-fx-service → qits-events-service',
+      'provider qits-workspaces-service → qits-fx-service',
     ]);
-    expect(texts(fixture, '.new .new-state')).toEqual(['provider state a workspace is stopped']);
+    expect(texts(fixture, '.new .new-state')).toEqual(['provider state one ledger']);
     expect(texts(fixture, '.new .group-head')).toEqual([
-      'consumer qits-workspaces-service → qits-edge-service',
-      'consumer qits-workspaces-service → qits-projects-service',
-      'provider qits-landing-app → qits-workspaces-service',
-      'provider qits-projects-service → qits-workspaces-service',
+      'consumer qits-fx-service → qits-events-service',
+      'consumer qits-fx-service → qits-projects-service',
+      'provider qits-landing-app → qits-fx-service',
+      'provider qits-workspaces-service → qits-fx-service',
     ]);
     expect(texts(fixture, '.new .interaction')).toContain(
-      'createEntity: creates an entity POST /projects/api/projects/qits/entities given a campaign exists, a project exists',
+      'openLedger: getProject GET /projects/api/projects/p-1 given a project exists, a signed-in user',
     );
     expect(texts(fixture, '.new .interaction')).toContain(
-      'stopWorkspace: stops a workspace POST /workspaces/api/workspaces/w-1/stop given a workspace is running verification failed',
+      'show-ledgers: getLedger GET /fx/api/ledgers/l-1 given one ledger verification failed',
     );
 
     expect(texts(fixture, '.removed .removed-pair')).toEqual([
-      'consumer qits-workspaces-service → qits-githost-service',
+      'consumer qits-fx-service → qits-githost-service',
     ]);
-    expect(texts(fixture, '.removed .removed-state')).toEqual([
-      'provider state an archived workspace',
-    ]);
+    expect(texts(fixture, '.removed .removed-state')).toEqual(['provider state a closed ledger']);
     expect(has(fixture, '.removed .removed-state qits-badge')).toBe(true);
     expect(
       (fixture.nativeElement as HTMLElement)
@@ -110,19 +109,19 @@ describe('QitsContractsReport', () => {
         ?.classList.contains('qits-badge-warning'),
     ).toBe(true);
     expect(texts(fixture, '.removed .interaction')).toEqual([
-      'getBranch: reads a branch GET /githost/api/repositories/qits/branches/main given a repository exists',
-      'listArchived: lists archived entities GET /projects/api/projects/qits/entities?archived=true given a project exists, an archived project',
+      'countLines: listLoc GET /githost/api/loc given a repository with counted lines',
+      'openLedger: createRepository POST /projects/api/repositories given a project exists',
+      'show-ledgers: deleteLedger DELETE /fx/api/ledgers/l-1 given two ledgers',
     ]);
 
     expect(texts(fixture, '.changed .group-head')).toEqual([
-      'consumer qits-workspaces-service → qits-projects-service',
+      'consumer qits-fx-service → qits-projects-service',
     ]);
     expect(texts(fixture, '.changed .interaction')).toEqual([
-      'getProject: reads a project GET /projects/api/projects/qits given a project exists',
+      'closeLedger: listProjects GET /projects/api/projects',
     ]);
-    expect(texts(fixture, '.skipped li')).toEqual([
-      'Skipped pacts/broken.json: not a pact: no consumer',
-    ]);
+    expect(has(fixture, '.skipped')).toBe(false);
+    expect(has(fixture, '.truncated')).toBe(false);
   });
 
   it('keeps the inventory collapsed until asked, then expands a pact to its interactions', () => {
@@ -130,19 +129,19 @@ describe('QitsContractsReport', () => {
     expect(has(fixture, '.inventory-body')).toBe(false);
     click(fixture, '.inventory-toggle');
     expect(texts(fixture, '.inventory h5')).toEqual([
-      'Provider states of qits-workspaces',
+      'Provider states of qits-fx',
       'As consumer',
       'As provider',
     ]);
     expect(texts(fixture, '.provider-states li')).toEqual([
-      'a workspace is running getWorkspace, stopWorkspace',
-      'a workspace is stopped startWorkspace',
+      'one ledger getLedger',
+      'two ledgers listLedgers, deleteLedger',
     ]);
     expect(texts(fixture, '.pact-toggle')).toEqual([
-      'qits-workspaces-service → qits-edge-service',
-      'qits-workspaces-service → qits-projects-service',
-      'qits-landing-app → qits-workspaces-service',
-      'qits-projects-service → qits-workspaces-service',
+      'qits-fx-service → qits-events-service',
+      'qits-fx-service → qits-projects-service',
+      'qits-landing-app → qits-fx-service',
+      'qits-workspaces-service → qits-fx-service',
     ]);
     expect(texts(fixture, '.pact .count')).toEqual([
       '1 interaction',
@@ -156,7 +155,7 @@ describe('QitsContractsReport', () => {
     click(fixture, '.pact-toggle', 2);
     expect(texts(fixture, '.pact .interaction')).toHaveLength(2);
     expect(texts(fixture, '.failed-interaction')).toEqual([
-      'stopWorkspace: stops a workspace POST /workspaces/api/workspaces/w-1/stop given a workspace is running verification failed',
+      'show-ledgers: getLedger GET /fx/api/ledgers/l-1 given one ledger verification failed',
     ]);
     expect(
       (fixture.nativeElement as HTMLElement)
@@ -169,17 +168,29 @@ describe('QitsContractsReport', () => {
     const fixture = render(PROVIDER_ABSENT);
     expect(text(fixture, '.provider-absent')).toBe('Provider side not reported in this run.');
     expect(texts(fixture, '.new .new-pair')).toEqual([
-      'consumer qits-workspaces-service → qits-edge-service',
+      'consumer qits-fx-service → qits-events-service',
     ]);
     expect(text(fixture, '.removed')).not.toContain('provider qits-landing-app');
     expect(texts(fixture, '.removed .removed-pair')).toEqual([
-      'consumer qits-workspaces-service → qits-githost-service',
+      'consumer qits-fx-service → qits-githost-service',
     ]);
   });
 
-  it('says plainly when the report was truncated', () => {
+  it('calls nothing new on a side the baseline did not report (the CLI’s second case)', () => {
+    const fixture = render(BASELINE_PROVIDER_ABSENT);
+    expect(has(fixture, '.provider-absent')).toBe(false);
+    expect(has(fixture, '.new-pair')).toBe(false);
+    expect(has(fixture, '.removed')).toBe(false);
+    expect(has(fixture, '.changed')).toBe(false);
+    expect(text(fixture, '.nothing-new')).toBe('Nothing new since 2026.1006.201216.');
+  });
+
+  it('says plainly when the report was truncated and a file was skipped', () => {
     const fixture = render(TRUNCATED);
     expect(text(fixture, '.truncated')).toContain('only the first 2,000 interactions');
+    expect(texts(fixture, '.skipped li')).toEqual([
+      'Skipped pacts/broken.json: not a pact: no consumer',
+    ]);
   });
 
   it('hides Removed when nothing was removed, and says when nothing is new', () => {
@@ -260,11 +271,11 @@ describe('QitsContractsReport', () => {
       click(fixture, '.inventory-toggle');
       const drawn = sources(fixture);
       const committed = drawn.find((entry) =>
-        entry.text.startsWith('pacts/qits-workspaces-service_qits-edge'),
+        entry.text.startsWith('pacts/qits-fx-service_qits-events'),
       );
       expect(committed?.tag).toBe('a');
       expect(committed?.href).toContain(
-        'branches/3f9c2e1a7b5d?path=pacts/qits-workspaces-service_qits-edge-service.json',
+        'branches/3f9c2e1a7b5d?path=pacts/qits-fx-service_qits-events-service.json',
       );
       expect(committed?.href).toContain('qits-workspaces-service');
       const generated = drawn.filter((entry) => entry.text.startsWith('.qits-reports/'));
@@ -322,8 +333,8 @@ describe('the contracts registration', () => {
     click(fixture, 'section.report[data-kind="contracts"] .toggle');
     expect(has(fixture, 'qits-contracts-report')).toBe(true);
     expect(texts(fixture, 'qits-contracts-report .new .new-pair')).toEqual([
-      'consumer qits-workspaces-service → qits-edge-service',
-      'provider qits-projects-service → qits-workspaces-service',
+      'consumer qits-fx-service → qits-events-service',
+      'provider qits-workspaces-service → qits-fx-service',
     ]);
   });
 });

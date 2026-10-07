@@ -7,6 +7,8 @@
 import type { QitsContractsPayload } from '../../contracts-report.types';
 import type { QitsReport, QitsReportContext } from '../../reports';
 import baselineJson from './diff/baseline.json';
+import absentBaselineJson from './diff/provider-side-absent/baseline.json';
+import absentReportJson from './diff/provider-side-absent/report.json';
 import reportJson from './diff/report.json';
 
 export const CONTRACTS_REPORT = reportJson as unknown as QitsContractsPayload;
@@ -80,9 +82,26 @@ export const PROVIDER_ABSENT: ContractsState = {
   context: contractsContext(true),
 };
 
-/** More than 2,000 interactions existed: the report says the lists are incomplete. */
+/**
+ * The CLI's second shared case: the baseline read no verification report, so this run's provider
+ * pacts are neither new nor anything else — nothing changed.
+ */
+export const BASELINE_PROVIDER_ABSENT: ContractsState = {
+  report: contractsReport('r-contracts', absentReportJson),
+  baseline: contractsReport('r-contracts-0', absentBaselineJson),
+  context: contractsContext(true),
+};
+
+/**
+ * More than 2,000 interactions existed, and one pact file did not parse: the report says both
+ * plainly.
+ */
 export const TRUNCATED: ContractsState = {
-  report: contractsReport('r-contracts', { ...CONTRACTS_REPORT, truncated: true }),
+  report: contractsReport('r-contracts', {
+    ...CONTRACTS_REPORT,
+    skipped: [{ file: 'pacts/broken.json', reason: 'not a pact: no consumer' }],
+    truncated: true,
+  }),
   baseline: contractsReport('r-contracts-0', CONTRACTS_BASELINE),
   context: contractsContext(true),
 };

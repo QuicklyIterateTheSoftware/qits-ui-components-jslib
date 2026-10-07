@@ -13,12 +13,6 @@
       "format": "pact-v4"
     },
     {
-      "language": "java",
-      "tool": "pact-jvm",
-      "file": ".qits-reports/pact-verification/qits-fx-service.json",
-      "format": "pact-jvm-json-report"
-    },
-    {
       "language": "json",
       "tool": "qits-golden-masters",
       "file": "golden-masters/index.json",
@@ -27,7 +21,7 @@
   ],
   "sides": {
     "consumer": true,
-    "provider": true,
+    "provider": false,
     "providerStates": true
   },
   "providerStates": {
@@ -110,39 +104,6 @@
           "status": 201,
           "contentHash": "sha256:aa23d66dabeedec09eeddaf5609cc5e9b3345ba347a7e3768ebbf27acf43b800",
           "verified": null
-        }
-      ]
-    },
-    {
-      "role": "PROVIDER",
-      "consumer": "qits-landing-app",
-      "provider": "qits-fx-service",
-      "specification": null,
-      "source": ".qits-reports/pact-verification/qits-fx-service.json",
-      "interactions": [
-        {
-          "description": "show-ledgers: deleteLedger",
-          "providerStates": [
-            "two ledgers"
-          ],
-          "type": "Synchronous/HTTP",
-          "method": "DELETE",
-          "path": "/fx/api/ledgers/l-1",
-          "status": 204,
-          "contentHash": "sha256:911204033c5b166d51f55cac52fa1146dec47c24a18eeef315f2dd39e1d2be9c",
-          "verified": "OK"
-        },
-        {
-          "description": "show-ledgers: listLedgers",
-          "providerStates": [
-            "two ledgers"
-          ],
-          "type": "Synchronous/HTTP",
-          "method": "GET",
-          "path": "/fx/api/ledgers",
-          "status": 200,
-          "contentHash": "sha256:523c70ee0a27c2f9daf3fa5d2fdf7f1630fa5cb30297af10975c6fa0820b732c",
-          "verified": "OK"
         }
       ]
     }

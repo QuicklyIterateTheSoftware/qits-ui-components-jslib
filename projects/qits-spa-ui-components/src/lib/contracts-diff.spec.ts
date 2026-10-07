@@ -1,13 +1,17 @@
 import { contractChanges } from './contracts-diff';
 import { readContractsPayload, type QitsContractsPayload } from './contracts-report.types';
-// The shared diff fixtures, copied VERBATIM — change them on the CLI's side and copy them again,
-// never edit them here, so the browser and the CLI keep answering the same question the same way.
+// The shared diff fixtures, copied VERBATIM (byte-identical) — change them on the CLI's side and
+// copy them again, never edit them here, so the browser and the CLI answer the same question the
+// same way.
 //   source:  qits-platform-access-cli
-//   path:    platform-access-commands/src/test/resources/report/contracts/diff/{baseline,report,changes}.json
-//   commit:  INTERIM — the CLI had not committed its set yet (qits-759); these were written to the
-//            same shape file and are to be replaced by the CLI's files, with the sha noted here.
+//   path:    platform-access-commands/src/test/resources/report/contracts/diff/
+//            {baseline,report,changes}.json and provider-side-absent/{baseline,report,changes}.json
+//   commit:  7cdb6bc2ee9159e51bf7886fe990df6493d8c175
 import baselineJson from './fixtures/contracts/diff/baseline.json';
 import changesJson from './fixtures/contracts/diff/changes.json';
+import absentBaselineJson from './fixtures/contracts/diff/provider-side-absent/baseline.json';
+import absentChangesJson from './fixtures/contracts/diff/provider-side-absent/changes.json';
+import absentReportJson from './fixtures/contracts/diff/provider-side-absent/report.json';
 import reportJson from './fixtures/contracts/diff/report.json';
 
 const REPORT = reportJson as unknown as QitsContractsPayload;
@@ -18,10 +22,26 @@ describe('contractChanges', () => {
     expect(contractChanges(REPORT, BASELINE)).toEqual(changesJson);
   });
 
+  it('answers the shared provider-side-absent fixture exactly as the CLI does', () => {
+    // The baseline read no verification report: the run's provider pacts are not "new".
+    expect(
+      contractChanges(
+        absentReportJson as unknown as QitsContractsPayload,
+        absentBaselineJson as unknown as QitsContractsPayload,
+      ),
+    ).toEqual(absentChangesJson);
+  });
+
   it('answers the shared fixture the same after the payload guard', () => {
     expect(
       contractChanges(readContractsPayload(reportJson)!, readContractsPayload(baselineJson)),
     ).toEqual(changesJson);
+    expect(
+      contractChanges(
+        readContractsPayload(absentReportJson)!,
+        readContractsPayload(absentBaselineJson),
+      ),
+    ).toEqual(absentChangesJson);
   });
 
   it('lists every key, in the shape file’s order', () => {

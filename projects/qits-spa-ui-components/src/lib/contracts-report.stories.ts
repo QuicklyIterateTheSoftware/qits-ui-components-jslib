@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 import { QitsContractsReport } from './contracts-report';
 import {
+  BASELINE_PROVIDER_ABSENT,
   FULL_DIFF,
   NO_BASELINE,
   PROVIDER_ABSENT,
@@ -35,7 +36,16 @@ export const ProviderSideAbsent: Story = {
   args: { ...PROVIDER_ABSENT },
 };
 
-/** Over 2,000 interactions: the report says plainly that the lists are incomplete. */
+/**
+ * The CLI's second shared case: the baseline read no verification report, so the provider pacts
+ * this run verifies are not called new — nothing changed.
+ */
+export const BaselineProviderSideAbsent: Story = {
+  name: 'Provider side not reported in the baseline',
+  args: { ...BASELINE_PROVIDER_ABSENT },
+};
+
+/** Over 2,000 interactions, and a pact file skipped: both said plainly. */
 export const Truncated: Story = { name: 'Truncated', args: { ...TRUNCATED } };
 
 /** A payload that is not a contracts report: one line, never an error. */
