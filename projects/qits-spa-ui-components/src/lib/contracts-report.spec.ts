@@ -301,7 +301,12 @@ describe('the contracts registration', () => {
     });
     TestBed.configureTestingModule({ providers: [provideQitsStandardReportKinds()] });
     const kinds = TestBed.inject(QITS_REPORT_KINDS);
-    expect(kinds.map((kind) => kind.kind)).toEqual(['test-results', 'coverage', 'contracts']);
+    expect(kinds.map((kind) => kind.kind)).toEqual([
+      'test-results',
+      'coverage',
+      'contracts',
+      'entity-changes',
+    ]);
     expect(kinds.find((kind) => kind.kind === 'contracts')).toBe(QITS_CONTRACTS_REPORT_KIND);
   });
 

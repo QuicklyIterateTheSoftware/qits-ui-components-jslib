@@ -13,6 +13,7 @@ import { map, Observable, switchMap } from 'rxjs';
 import { afterApiOrigin, QitsAppLinks } from './app-links';
 import { QITS_CONTRACTS_REPORT_KIND } from './contracts-report';
 import { QITS_COVERAGE_KIND, QitsCoverageReport } from './coverage-report';
+import { QITS_ENTITY_CHANGES_REPORT_KIND } from './entity-changes-report';
 import { provideQitsStandardFailureInsights } from './failures/standard-failure-insights';
 import { QITS_TEST_RESULTS_KIND, QitsTestResultsReport } from './test-results-report';
 
@@ -94,6 +95,82 @@ export interface QitsReportContext {
 }
 
 /**
+ * The `entity-changes` report's payload, version 1 (qits-760), as the CLI's
+ * `EntityChangesReportKind` writes it: a semantic diff of the generated `docs/database/*.md`
+ * entity diagrams at the fold against the same files at the baseline release's tag.
+ *
+ * Named `…Payload` because `QitsEntityChangesReport` is the component that draws it.
+ */
+export interface QitsEntityChangesPayload {
+  /** The release compared with; null where the run has none. */
+  readonly baseline: QitsEntityChangesBaseline | null;
+  readonly units: readonly QitsEntityUnitChange[];
+  /** Above 1 MiB the `after` text of UNCHANGED units was dropped first. */
+  readonly truncated: boolean;
+}
+
+/** The baseline release, and whether its tag carried a generated diagram at all. */
+export interface QitsEntityChangesBaseline {
+  readonly version: string | null;
+  readonly tagSha: string | null;
+  /** False for a version from before the rollout: every unit is then CURRENT. */
+  readonly hadDiagram: boolean;
+}
+
+/**
+ * A unit's status. `CURRENT` means there is nothing to compare with — no baseline, or a baseline
+ * tag without a diagram — so the diagram is new, not "N entities added". Typed open so an unknown
+ * status is still drawn.
+ */
+export type QitsEntityUnitStatus = 'ADDED' | 'REMOVED' | 'CHANGED' | 'UNCHANGED' | 'CURRENT';
+
+/** A table's status within a unit. */
+export type QitsEntityTableStatus = 'ADDED' | 'REMOVED' | 'CHANGED';
+
+/** One persistence unit's (or Java package's) diagram file, compared. */
+export interface QitsEntityUnitChange {
+  /** `docs/database/ci.md`. */
+  readonly file: string;
+  /** `ci`. */
+  readonly unit: string;
+  readonly status: QitsEntityUnitStatus | string;
+  readonly tables: readonly QitsEntityTableChange[];
+  readonly relations: QitsEntityRelationChanges;
+  /** The mermaid block's text at the baseline — sent only for CHANGED and REMOVED units. */
+  readonly before: string | null;
+  /** The mermaid block's text at the fold; null for REMOVED, or dropped by truncation. */
+  readonly after: string | null;
+}
+
+/** One table that was added, removed or changed. */
+export interface QitsEntityTableChange {
+  readonly name: string;
+  readonly status: QitsEntityTableStatus | string;
+  /** The reactor module, or the library artifactId, the entity came from. */
+  readonly origin: string | null;
+  readonly columns: QitsEntityColumnChanges;
+}
+
+export interface QitsEntityColumnChanges {
+  readonly added: readonly string[];
+  readonly removed: readonly string[];
+  readonly changed: readonly QitsEntityColumnChange[];
+}
+
+/** A column whose type, keys, nullability or length moved: `string, not null, 64` → `…, 128`. */
+export interface QitsEntityColumnChange {
+  readonly name: string;
+  readonly before: string;
+  readonly after: string;
+}
+
+/** Relations as their diagram lines: `ci_report }o--|| ci_run : run_id`. */
+export interface QitsEntityRelationChanges {
+  readonly added: readonly string[];
+  readonly removed: readonly string[];
+}
+
+/**
  * One report kind's view: which kind and payload versions it draws, the title of its section, and
  * the component that draws it.
  *
@@ -124,8 +201,8 @@ export function provideQitsReportKind(kind: QitsReportKind): EnvironmentProvider
 }
 
 /**
- * The standard kinds' views, registered together: `test-results`, `coverage` and `contracts`
- * (qits-759), payload version 1 of each. Both pages that host `<qits-run-reports>` provide this
+ * The standard kinds' views, registered together: `test-results`, `coverage`, `contracts`
+ * (qits-759) and `entity-changes` (qits-760), payload version 1 of each. Both pages that host `<qits-run-reports>` provide this
  * once, so a kind added here reaches both with no change of their own.
  *
  * It brings `provideQitsStandardFailureInsights()` with it, so an opened failure in the test results
@@ -146,6 +223,7 @@ export function provideQitsStandardReportKinds(): EnvironmentProviders {
       component: QitsCoverageReport,
     }),
     provideQitsReportKind(QITS_CONTRACTS_REPORT_KIND),
+    provideQitsReportKind(QITS_ENTITY_CHANGES_REPORT_KIND),
     provideQitsStandardFailureInsights(),
   ]);
 }

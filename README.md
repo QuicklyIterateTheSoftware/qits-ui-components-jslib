@@ -16,30 +16,31 @@ A fourth read hangs off the same rule and is opt-in: the pending-builds bolt ask
 building, and keeps that count current off the platform's event stream whether or not anybody has
 opened the panel over it.
 
-| Component          | Selector               | What it is                                                                                                                                                                                                                                    |
-| ------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `QitsButton`       | `<qits-button>`        | The button. `variant` (`primary`/`secondary`/`ghost`), `size` (`sm`/`md`/`lg`), `type`, `disabled`, `busy`; emits `pressed`.                                                                                                                  |
-| `QitsBadge`        | `<qits-badge>`         | A short status word. Required `label`, semantic `tone` (`neutral`/`info`/`success`/`warning`/`danger`/`highlight`).                                                                                                                           |
-| `QitsCard`         | `<qits-card>`          | A titled surface. `heading`, `subheading`, `elevated`; projects into the body, and `[qitsCardActions]` into the header.                                                                                                                       |
-| `QitsPicker`       | `<qits-picker>`        | Pick one of a list. Required `options` (`{ value: T, label: string }[]`), two-way `value` of `T \| undefined`; `compareWith`, `placeholder`, `disabled`.                                                                                      |
-| `QitsMainLayout`   | `<qits-main-layout>`   | The application skeleton: the project picker, the pending-builds bolt beside it, the nested sidebar, and the `<router-outlet />` the app's child routes render into. `brand` is the top-left fallback; `links` an override in the flat shape. |
-| `QitsNavSubmenu`   | `[qitsNavSubmenu]`     | Marks an `<ng-template>` as the sub-menu under the current navigation row. The layout gives it a box; the app styles what goes in it.                                                                                                         |
-| `QitsDiffViewer`   | `<qits-diff-viewer>`   | A file's unified diff, coloured by line. `patch` is git's own text and `path` the file it is of; it renders, it never fetches.                                                                                                                |
-| `QitsChangeTree`   | `<qits-change-tree>`   | The files a change set touches, as a tree. `entries` (`{ path, previousPath, changeType }[]`), two-way `selected`, `label`. Single-child directory chains fold into one row.                                                                  |
-| `QitsStepProgress` | `<qits-step-progress>` | A pipeline's steps as a segmented track: one bubble per planned step, each filling against **its own** expected duration with its actual/expected beside it. Required `steps` (`{ expectedMillis, startedAt?, finishedAt? }[]`), `label`.     |
-| `QitsRunReports`   | `<qits-run-reports>`   | A CI run's release reports: every highlight in one strip, then one collapsible section per report drawn by the view its kind registered. Required `runId`; `reload()` when the run finishes. Reads qits-ci itself — see _Release reports_.    |
+| Component            | Selector                 | What it is                                                                                                                                                                                                                                    |
+| -------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `QitsButton`         | `<qits-button>`          | The button. `variant` (`primary`/`secondary`/`ghost`), `size` (`sm`/`md`/`lg`), `type`, `disabled`, `busy`; emits `pressed`.                                                                                                                  |
+| `QitsBadge`          | `<qits-badge>`           | A short status word. Required `label`, semantic `tone` (`neutral`/`info`/`success`/`warning`/`danger`/`highlight`).                                                                                                                           |
+| `QitsCard`           | `<qits-card>`            | A titled surface. `heading`, `subheading`, `elevated`; projects into the body, and `[qitsCardActions]` into the header.                                                                                                                       |
+| `QitsPicker`         | `<qits-picker>`          | Pick one of a list. Required `options` (`{ value: T, label: string }[]`), two-way `value` of `T \| undefined`; `compareWith`, `placeholder`, `disabled`.                                                                                      |
+| `QitsMainLayout`     | `<qits-main-layout>`     | The application skeleton: the project picker, the pending-builds bolt beside it, the nested sidebar, and the `<router-outlet />` the app's child routes render into. `brand` is the top-left fallback; `links` an override in the flat shape. |
+| `QitsNavSubmenu`     | `[qitsNavSubmenu]`       | Marks an `<ng-template>` as the sub-menu under the current navigation row. The layout gives it a box; the app styles what goes in it.                                                                                                         |
+| `QitsDiffViewer`     | `<qits-diff-viewer>`     | A file's unified diff, coloured by line. `patch` is git's own text and `path` the file it is of; it renders, it never fetches.                                                                                                                |
+| `QitsChangeTree`     | `<qits-change-tree>`     | The files a change set touches, as a tree. `entries` (`{ path, previousPath, changeType }[]`), two-way `selected`, `label`. Single-child directory chains fold into one row.                                                                  |
+| `QitsStepProgress`   | `<qits-step-progress>`   | A pipeline's steps as a segmented track: one bubble per planned step, each filling against **its own** expected duration with its actual/expected beside it. Required `steps` (`{ expectedMillis, startedAt?, finishedAt? }[]`), `label`.     |
+| `QitsRunReports`     | `<qits-run-reports>`     | A CI run's release reports: every highlight in one strip, then one collapsible section per report drawn by the view its kind registered. Required `runId`; `reload()` when the run finishes. Reads qits-ci itself — see _Release reports_.    |
+| `QitsMermaidDiagram` | `<qits-mermaid-diagram>` | A Mermaid definition, drawn. mermaid loads lazily, only when one renders, in `securityLevel: 'strict'`; an undrawable definition stays legible as text.                                                                                       |
 
 ## Release reports
 
 A release request's QA run submits structured **reports** to qits-ci — `test-results`,
-`coverage` and `contracts` today, more kinds later — and `<qits-run-reports>` is the one area both pages draw them
+`coverage`, `contracts` and `entity-changes` today, more kinds later — and `<qits-run-reports>` is the one area both pages draw them
 in. It is the second component here that reads for itself, on the bolt's terms: qits-ci's own origin
 (`QitsAppLinks.apiOrigin('qits-ci')`), after the navigation has said where that is, with
 `withCredentials`. `QitsReportsClient` is the whole of that door — the summaries, one report, the
 baseline, and the baseline's reports of a kind — and a story or a spec replaces it with a literal.
 
 ```ts
-providers: [provideQitsStandardReportKinds()]; // test-results v1 + coverage v1 + contracts v1
+providers: [provideQitsStandardReportKinds()]; // test-results, coverage, contracts, entity-changes v1
 ```
 
 ```html
@@ -69,6 +70,13 @@ baseline)` is a pure function with the CLI's identity rules — a state by name,
 consumer and provider, an interaction by pair, description and sorted state names, "changed" by
 `contentHash` — and a side either report did not read is never compared. Its spec asserts the CLI's
 own shared fixture (`src/lib/fixtures/contracts/diff/`, copied verbatim), so the two cannot drift.
+
+The entity-changes view (qits-760) draws the CLI's semantic diff of `docs/database/*.md` as it
+arrives — per unit a status chip, the tables, columns and relations added, removed and changed,
+and the diagrams through `QitsMermaidDiagram`: a Before / After switch for a CHANGED unit, After
+only for ADDED and CURRENT (no baseline: the first diagram), Before only for REMOVED, and an
+UNCHANGED unit collapsed. `mermaid` is a dependency of this package, so a consumer adds nothing,
+and its chunk loads only on a page that draws a diagram.
 
 ## A diff is rendered, never fetched
 

@@ -113,6 +113,15 @@ export {
   QitsReportsClient,
 } from './lib/reports';
 export type {
+  QitsEntityChangesBaseline,
+  QitsEntityChangesPayload,
+  QitsEntityColumnChange,
+  QitsEntityColumnChanges,
+  QitsEntityRelationChanges,
+  QitsEntityTableChange,
+  QitsEntityTableStatus,
+  QitsEntityUnitChange,
+  QitsEntityUnitStatus,
   QitsReport,
   QitsReportBaseline,
   QitsReportContext,
@@ -168,6 +177,16 @@ export type {
   QitsSkippedFile,
 } from './lib/contracts-report.types';
 export { contractChanges, qitsInteractionKey, qitsPairKey } from './lib/contracts-diff';
+export { QitsMermaidDiagram, QITS_MERMAID_LOADER } from './lib/mermaid-diagram';
+export type { QitsMermaid, QitsMermaidTheme } from './lib/mermaid-diagram';
+export {
+  QITS_ENTITY_CHANGES_KIND,
+  QITS_ENTITY_CHANGES_REPORT_KIND,
+  QitsEntityChangesReport,
+  qitsEntityStatusTone,
+  readEntityChangesPayload,
+} from './lib/entity-changes-report';
+export type { QitsEntityDiagramView } from './lib/entity-changes-report';
 export {
   classifyFailure,
   provideQitsFailureClassifier,
