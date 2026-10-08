@@ -326,6 +326,7 @@ describe('the entity-changes registration', () => {
       'coverage',
       'contracts',
       'entity-changes',
+      'screenshots',
     ]);
     expect(kinds.find((kind) => kind.kind === 'entity-changes')).toBe(
       QITS_ENTITY_CHANGES_REPORT_KIND,

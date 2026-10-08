@@ -15,6 +15,7 @@ import { QITS_CONTRACTS_REPORT_KIND } from './contracts-report';
 import { QITS_COVERAGE_KIND, QitsCoverageReport } from './coverage-report';
 import { QITS_ENTITY_CHANGES_REPORT_KIND } from './entity-changes-report';
 import { provideQitsStandardFailureInsights } from './failures/standard-failure-insights';
+import { QITS_SCREENSHOTS_REPORT_KIND } from './screenshots-report';
 import { QITS_TEST_RESULTS_KIND, QitsTestResultsReport } from './test-results-report';
 
 /**
@@ -201,9 +202,15 @@ export function provideQitsReportKind(kind: QitsReportKind): EnvironmentProvider
 }
 
 /**
- * The standard kinds' views, registered together: `test-results`, `coverage`, `contracts`
- * (qits-759) and `entity-changes` (qits-760), payload version 1 of each. Both pages that host `<qits-run-reports>` provide this
- * once, so a kind added here reaches both with no change of their own.
+ * The standard kinds' views, registered together, payload version 1 of each:
+ *
+ * - `test-results` (Tests) and `coverage` (Coverage), qits-754;
+ * - `contracts` (Contracts), qits-759;
+ * - `entity-changes` (Entities), qits-760;
+ * - `screenshots` (Screenshots), qits-762 — {@link provideQitsScreenshotsReportKind}.
+ *
+ * Both pages that host `<qits-run-reports>` provide this once, so a kind added here reaches both
+ * with no change of their own.
  *
  * It brings `provideQitsStandardFailureInsights()` with it, so an opened failure in the test results
  * shows its test code wherever the failure locates it.
@@ -224,8 +231,18 @@ export function provideQitsStandardReportKinds(): EnvironmentProviders {
     }),
     provideQitsReportKind(QITS_CONTRACTS_REPORT_KIND),
     provideQitsReportKind(QITS_ENTITY_CHANGES_REPORT_KIND),
+    provideQitsScreenshotsReportKind(),
     provideQitsStandardFailureInsights(),
   ]);
+}
+
+/**
+ * The `screenshots` view alone (qits-762): `{ kind: 'screenshots', versions: [1], title:
+ * 'Screenshots', component: QitsScreenshotsReport }`. Part of
+ * {@link provideQitsStandardReportKinds}; for a host that draws only some kinds.
+ */
+export function provideQitsScreenshotsReportKind(): EnvironmentProviders {
+  return provideQitsReportKind(QITS_SCREENSHOTS_REPORT_KIND);
 }
 
 /** Where a run's reports are read, on qits-ci's own origin. */

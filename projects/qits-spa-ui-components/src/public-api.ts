@@ -107,6 +107,7 @@ export type {
 } from './lib/change-tree-model';
 export {
   provideQitsReportKind,
+  provideQitsScreenshotsReportKind,
   provideQitsStandardReportKinds,
   QITS_REPORT_KINDS,
   QITS_REPORTS_PATH,
@@ -187,6 +188,37 @@ export {
   readEntityChangesPayload,
 } from './lib/entity-changes-report';
 export type { QitsEntityDiagramView } from './lib/entity-changes-report';
+export {
+  QITS_SCREENSHOTS_REPORT_KIND,
+  QitsScreenshotPaint,
+  QitsScreenshotsReport,
+} from './lib/screenshots-report';
+export type { QitsScreenshotCompareMode } from './lib/screenshots-report';
+export { asScreenshotsPayload, QITS_SCREENSHOTS_KIND } from './lib/screenshots-report.model';
+export type {
+  QitsScreenshotConvention,
+  QitsScreenshotEntry,
+  QitsScreenshotRenderer,
+  QitsScreenshotRendererEntry,
+  QitsScreenshotsBaseline,
+  QitsScreenshotsPayload,
+  QitsScreenshotStatus,
+  QitsScreenshotTotals,
+} from './lib/screenshots-report.model';
+export { QITS_REPOSITORY_RAW_CACHE_SIZE, QitsRepositoryRawClient } from './lib/repository-raw';
+export {
+  decodeImage,
+  diffScreenshots,
+  QITS_IMAGE_DECODER,
+  QITS_SCREENSHOT_DIFF_ACCENT,
+  screenshotDiffOverlay,
+} from './lib/screenshot-diff';
+export type {
+  QitsImageDataLike,
+  QitsImageDecoder,
+  QitsImageSize,
+  QitsScreenshotDiff,
+} from './lib/screenshot-diff';
 export {
   classifyFailure,
   provideQitsFailureClassifier,

@@ -33,14 +33,14 @@ opened the panel over it.
 ## Release reports
 
 A release request's QA run submits structured **reports** to qits-ci — `test-results`,
-`coverage`, `contracts` and `entity-changes` today, more kinds later — and `<qits-run-reports>` is the one area both pages draw them
+`coverage`, `contracts`, `entity-changes` and `screenshots` today, more kinds later — and `<qits-run-reports>` is the one area both pages draw them
 in. It is the second component here that reads for itself, on the bolt's terms: qits-ci's own origin
 (`QitsAppLinks.apiOrigin('qits-ci')`), after the navigation has said where that is, with
 `withCredentials`. `QitsReportsClient` is the whole of that door — the summaries, one report, the
 baseline, and the baseline's reports of a kind — and a story or a spec replaces it with a literal.
 
 ```ts
-providers: [provideQitsStandardReportKinds()]; // test-results, coverage, contracts, entity-changes v1
+providers: [provideQitsStandardReportKinds()]; // test-results, coverage, contracts, entity-changes, screenshots v1
 ```
 
 ```html
@@ -77,6 +77,18 @@ and the diagrams through `QitsMermaidDiagram`: a Before / After switch for a CHA
 only for ADDED and CURRENT (no baseline: the first diagram), Before only for REMOVED, and an
 UNCHANGED unit collapsed. `mermaid` is a dependency of this package, so a consumer adds nothing,
 and its chunk loads only on a page that draws a diagram.
+
+The screenshots view (qits-762) is where a reviewer accepts a visual change: the committed
+screenshot baselines the fold adds, changes and removes against the baseline tag, grouped by spec,
+with a banner when the renderer fingerprint moved. Rows are collapsed and **no image is read until
+one is opened** — a real change lists a hundred. An open row reads its bytes through
+`QitsRepositoryRawClient`, qits-githost's raw door on its own origin (`apiOrigin('qits-githost')`,
+`withCredentials`, the last 40 answers kept), at the baseline's commit and at the fold. A changed
+screenshot is shown side by side, as a Diff (the after image dimmed, differing pixels in a solid
+accent) or as an Onion with an opacity slider; `diffScreenshots(before, after)` is the pure pixel
+comparison behind the count, exact RGBA over the union of both sizes, and decoding goes through
+`QITS_IMAGE_DECODER` so a spec replaces it. Object URLs are revoked when a row closes and when the
+view goes. `provideQitsScreenshotsReportKind()` registers it alone.
 
 ## A diff is rendered, never fetched
 
