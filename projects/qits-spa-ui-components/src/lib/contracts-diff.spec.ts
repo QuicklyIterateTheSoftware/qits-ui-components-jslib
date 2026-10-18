@@ -1,4 +1,4 @@
-import { contractChanges, qitsInteractionKey, qitsPairKey } from './contracts-diff';
+import { contractChanges, qitsInteractionKey, qitsPactPair, qitsPairKey } from './contracts-diff';
 import {
   readContractsPayload,
   type QitsContractPair,
@@ -197,33 +197,45 @@ describe('readContractsPayload', () => {
 });
 
 describe('qitsPairKey and qitsInteractionKey', () => {
-  const direct: QitsContractPair = { role: 'CONSUMER', consumer: 'a', provider: 'b' };
+  // A pair's own `via` is just the library's repository name — a string, or null for a direct
+  // pact — never the pact's full {repository, artifact, version} object; that object lives only on
+  // QitsPactEntry.via, and the view looks the version back up from there (see viaVersions).
+  const direct: QitsContractPair = { role: 'CONSUMER', consumer: 'a', via: null, provider: 'b' };
   const viaLib: QitsContractPair = {
     role: 'CONSUMER',
     consumer: 'a',
+    via: 'qits-eventstream-javalib',
     provider: 'b',
-    via: { repository: 'qits-eventstream-javalib', artifact: 'eu.wohlben.qits:qits-eventstream' },
   };
-  const viaOther: QitsContractPair = {
-    ...direct,
-    via: { repository: 'qits-other-javalib' },
-  };
+  const viaOther: QitsContractPair = { ...direct, via: 'qits-other-javalib' };
 
   it('keeps a direct and a library pact for the same consumer and provider as separate pairs', () => {
     expect(qitsPairKey(direct)).not.toBe(qitsPairKey(viaLib));
     expect(qitsPairKey(viaLib)).not.toBe(qitsPairKey(viaOther));
   });
 
-  it('is the same key whatever the library’s artifact or version — only the repository is identity', () => {
-    const sameLibOtherVersion: QitsContractPair = {
-      ...direct,
+  it('resolves a pact’s own pair the same way whatever the library’s artifact or version — only the repository is identity', () => {
+    const base: QitsPactEntry = {
+      role: 'CONSUMER',
+      consumer: 'a',
+      provider: 'b',
+      specification: null,
+      source: null,
+      interactions: [],
+    };
+    const v1: QitsPactEntry = {
+      ...base,
+      via: { repository: 'qits-eventstream-javalib', artifact: 'g:a', version: '1' },
+    };
+    const v2: QitsPactEntry = {
+      ...base,
       via: {
         repository: 'qits-eventstream-javalib',
         artifact: 'different:coordinate',
-        version: '9',
+        version: '2',
       },
     };
-    expect(qitsPairKey(viaLib)).toBe(qitsPairKey(sameLibOtherVersion));
+    expect(qitsPairKey(qitsPactPair(v1))).toBe(qitsPairKey(qitsPactPair(v2)));
   });
 
   it('separates interactions of a direct and a library pact the same way', () => {
@@ -258,9 +270,7 @@ describe('qitsPairKey and qitsInteractionKey', () => {
 
     const changes = contractChanges(report, empty)!;
     expect(changes.newPairs).toHaveLength(2);
-    expect(changes.newPairs.find((pair) => pair.via === undefined)).toBeTruthy();
-    expect(
-      changes.newPairs.find((pair) => pair.via?.repository === 'qits-eventstream-javalib'),
-    ).toBeTruthy();
+    expect(changes.newPairs.find((pair) => pair.via === null)).toBeTruthy();
+    expect(changes.newPairs.find((pair) => pair.via === 'qits-eventstream-javalib')).toBeTruthy();
   });
 });

@@ -68,7 +68,26 @@ export function contractChanges(
  * provider stay two pairs, never one.
  */
 export function qitsPairKey(pair: QitsContractPair): string {
-  return JSON.stringify([pair.role, pair.consumer, pair.via?.repository ?? null, pair.provider]);
+  return JSON.stringify([pair.role, pair.consumer, pair.via, pair.provider]);
+}
+
+/**
+ * `pact`'s own pair identity — `via` resolved from its full `{repository, artifact, version}` to
+ * the repository alone, the same resolution {@link pairsOf} and {@link identityOf} apply, so a view
+ * that has only the pact (not a diff's `QitsContractPair`) still keys it identically.
+ */
+export function qitsPactPair(pact: {
+  readonly role: QitsContractRole;
+  readonly consumer: string;
+  readonly via?: QitsPactEntry['via'];
+  readonly provider: string;
+}): QitsContractPair {
+  return {
+    role: pact.role,
+    consumer: pact.consumer,
+    via: pact.via?.repository ?? null,
+    provider: pact.provider,
+  };
 }
 
 /** The identity key of an interaction of `pair`. */
@@ -79,7 +98,7 @@ export function qitsInteractionKey(
   return JSON.stringify([
     pair.role,
     pair.consumer,
-    pair.via?.repository ?? null,
+    pair.via,
     pair.provider,
     interaction.description,
     sortedStates(interaction.providerStates),
@@ -98,12 +117,7 @@ function pairsOf(
   const pairs = new Map<string, QitsContractPair>();
   for (const pact of pacts) {
     if (!compared(pact.role)) continue;
-    const pair = {
-      role: pact.role,
-      consumer: pact.consumer,
-      provider: pact.provider,
-      via: pact.via,
-    };
+    const pair = qitsPactPair(pact);
     const key = qitsPairKey(pair);
     if (!pairs.has(key)) pairs.set(key, pair);
   }
@@ -118,7 +132,7 @@ function interactionsOf(
   for (const pact of pacts) {
     if (!compared(pact.role)) continue;
     for (const interaction of pact.interactions) {
-      const key = qitsInteractionKey(pact, interaction);
+      const key = qitsInteractionKey(qitsPactPair(pact), interaction);
       if (interactions.has(key)) continue;
       interactions.set(key, {
         identity: identityOf(pact, interaction),
@@ -134,10 +148,7 @@ function identityOf(
   interaction: QitsInteractionEntry,
 ): QitsContractInteraction {
   return {
-    role: pact.role,
-    consumer: pact.consumer,
-    provider: pact.provider,
-    via: pact.via,
+    ...qitsPactPair(pact),
     description: interaction.description,
     providerStates: sortedStates(interaction.providerStates),
   };
@@ -168,7 +179,7 @@ function comparePairs(a: QitsContractPair, b: QitsContractPair): number {
   return (
     compareText(a.role, b.role) ||
     compareText(a.consumer, b.consumer) ||
-    compareText(a.via?.repository ?? '', b.via?.repository ?? '') ||
+    compareText(a.via ?? '', b.via ?? '') ||
     compareText(a.provider, b.provider)
   );
 }

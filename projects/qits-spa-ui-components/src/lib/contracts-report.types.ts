@@ -108,16 +108,18 @@ export interface QitsContractsPayload {
 }
 
 /**
- * A pair's identity: role, consumer and provider, with the names as written in the pact, plus the
- * library the calls go through when this is a library pact (its repository is part of the
- * identity — see {@link QitsPactEntry.via} — so a direct and a library pact for the same consumer
- * and provider are two pairs, never one).
+ * A pair's identity: role, consumer and provider, with the names as written in the pact, plus —
+ * between consumer and provider, the CLI's own field order — the library's repository the calls go
+ * through, or null for a direct pact. Only the repository is identity (see {@link QitsPactEntry.via}
+ * for the artifact and version a specific pact pins), so a direct and a library pact for the same
+ * consumer and provider are two pairs, never one, and two releases of the same library are one pair,
+ * never two.
  */
 export interface QitsContractPair {
   readonly role: QitsContractRole;
   readonly consumer: string;
+  readonly via: string | null;
   readonly provider: string;
-  readonly via?: QitsPactEntry['via'];
 }
 
 /** An interaction's identity: its pair, its description and its sorted provider-state names. */

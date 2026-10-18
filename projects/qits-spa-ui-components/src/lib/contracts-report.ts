@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 
 import { QitsAppLinks } from './app-links';
 import { QitsBadge, type QitsBadgeTone } from './badge';
-import { contractChanges, qitsInteractionKey, qitsPairKey } from './contracts-diff';
+import { contractChanges, qitsInteractionKey, qitsPactPair, qitsPairKey } from './contracts-diff';
 import {
   QITS_CONTRACTS_KIND,
   readContractsPayload,
@@ -71,25 +71,28 @@ const ROLE_TONE: Record<QitsContractRole, QitsBadgeTone> = {
         &ngsp;<qits-badge class="verified" label="verification failed" tone="danger" />
       }
     </ng-template>
-    <ng-template #pairLabel let-pair let-tone="tone">
+    <ng-template #pairLabel let-pair let-tone="tone" let-versions="versions">
       <qits-badge
         class="role"
         [label]="roleLabel(pair.role)"
         [tone]="roleTone(pair.role, tone)"
       />&ngsp;<span class="pair"
         >{{ pair.consumer }} →
-        @if (pair.via; as via) {
-          <span class="via muted">{{ viaLabel(via) }}</span> →
+        @if (pair.via; as repository) {
+          <span class="via muted">{{ viaLabel(repository, versionOf(pair, versions)) }}</span> →
         }
         {{ pair.provider }}</span
       >
     </ng-template>
-    <ng-template #groups let-groups let-tone="tone">
+    <ng-template #groups let-groups let-tone="tone" let-versions="versions">
       @for (group of groups; track group.key) {
         <div class="group">
           <p class="group-head">
             <ng-container
-              *ngTemplateOutlet="pairLabel; context: { $implicit: group.pair, tone: tone }"
+              *ngTemplateOutlet="
+                pairLabel;
+                context: { $implicit: group.pair, tone: tone, versions: versions }
+              "
             />
           </p>
           <ul class="interactions">
@@ -137,7 +140,12 @@ const ROLE_TONE: Record<QitsContractRole, QitsBadgeTone> = {
             <ul class="pairs">
               @for (pair of c.newPairs; track $index) {
                 <li class="new-pair">
-                  <ng-container *ngTemplateOutlet="pairLabel; context: { $implicit: pair }" />
+                  <ng-container
+                    *ngTemplateOutlet="
+                      pairLabel;
+                      context: { $implicit: pair, versions: reportViaVersions() }
+                    "
+                  />
                 </li>
               }
             </ul>
@@ -151,7 +159,12 @@ const ROLE_TONE: Record<QitsContractRole, QitsBadgeTone> = {
               }
             </ul>
           }
-          <ng-container *ngTemplateOutlet="groups; context: { $implicit: newGroups() }" />
+          <ng-container
+            *ngTemplateOutlet="
+              groups;
+              context: { $implicit: newGroups(), versions: reportViaVersions() }
+            "
+          />
         </section>
 
         @if (c.removedPairs.length || c.removedStates.length || removedGroups().length) {
@@ -162,7 +175,14 @@ const ROLE_TONE: Record<QitsContractRole, QitsBadgeTone> = {
                 @for (pair of c.removedPairs; track $index) {
                   <li class="removed-pair">
                     <ng-container
-                      *ngTemplateOutlet="pairLabel; context: { $implicit: pair, tone: 'neutral' }"
+                      *ngTemplateOutlet="
+                        pairLabel;
+                        context: {
+                          $implicit: pair,
+                          tone: 'neutral',
+                          versions: baselineViaVersions(),
+                        }
+                      "
                     />
                   </li>
                 }
@@ -178,7 +198,14 @@ const ROLE_TONE: Record<QitsContractRole, QitsBadgeTone> = {
               </ul>
             }
             <ng-container
-              *ngTemplateOutlet="groups; context: { $implicit: removedGroups(), tone: 'neutral' }"
+              *ngTemplateOutlet="
+                groups;
+                context: {
+                  $implicit: removedGroups(),
+                  tone: 'neutral',
+                  versions: baselineViaVersions(),
+                }
+              "
             />
           </section>
         }
@@ -186,7 +213,12 @@ const ROLE_TONE: Record<QitsContractRole, QitsBadgeTone> = {
         @if (changedGroups().length) {
           <section class="changed">
             <h4>Changed</h4>
-            <ng-container *ngTemplateOutlet="groups; context: { $implicit: changedGroups() }" />
+            <ng-container
+              *ngTemplateOutlet="
+                groups;
+                context: { $implicit: changedGroups(), versions: reportViaVersions() }
+              "
+            />
           </section>
         }
       }
@@ -234,7 +266,7 @@ const ROLE_TONE: Record<QitsContractRole, QitsBadgeTone> = {
                     >
                       {{ pact.entry.consumer }} →
                       @if (pact.entry.via; as via) {
-                        <span class="via muted">{{ viaLabel(via) }}</span> →
+                        <span class="via muted">{{ viaLabel(via.repository, via.version) }}</span> →
                       }
                       {{ pact.entry.provider }}
                     </button>
@@ -374,8 +406,20 @@ export class QitsContractsReport {
   }
 
   /** The library segment of a pair drawn through `via`: its repository, with the version pinned. */
-  protected viaLabel(via: { readonly repository: string; readonly version?: string }): string {
-    return via.version ? `${via.repository} (${via.version})` : via.repository;
+  protected viaLabel(repository: string, version?: string): string {
+    return version ? `${repository} (${version})` : repository;
+  }
+
+  /**
+   * The version pinned for `pair`'s library, looked up from `versions` (built by {@link viaVersions}
+   * from the matching payload's pact entries) — a pair's own identity does not carry it, since two
+   * releases of the same library are one pair, never two.
+   */
+  protected versionOf(
+    pair: QitsContractPair,
+    versions: ReadonlyMap<string, string> | undefined,
+  ): string | undefined {
+    return versions?.get(qitsPairKey(pair));
   }
 
   /** The role's own tone, unless a section mutes it. */
@@ -400,6 +444,11 @@ export class QitsContractsReport {
     const payload = this.payload();
     return payload ? contractChanges(payload, this.baselinePayload()) : null;
   });
+
+  /** `qitsPairKey` → the library's version, from the report's own pacts. */
+  protected readonly reportViaVersions = computed(() => viaVersions(this.payload()));
+  /** The same, from the baseline's pacts — what a removed pair's label is drawn against. */
+  protected readonly baselineViaVersions = computed(() => viaVersions(this.baselinePayload()));
 
   protected readonly newGroups = computed(() =>
     groupsOf(this.changes()?.newInteractions, this.payload()),
@@ -429,7 +478,7 @@ export class QitsContractsReport {
         pacts: pacts
           .filter((pact) => pact.role === role)
           .map((entry, index) => ({
-            key: `${qitsPairKey(entry)}#${index}`,
+            key: `${qitsPairKey(qitsPactPair(entry))}#${index}`,
             entry,
             lines: entry.interactions.map((interaction, line): QitsContractLine => ({
               key: `${line}`,
@@ -484,8 +533,9 @@ function groupsOf(
   if (!interactions?.length) return [];
   const entries = new Map<string, QitsInteractionEntry>();
   for (const pact of payload?.pacts ?? []) {
+    const pair = qitsPactPair(pact);
     for (const interaction of pact.interactions) {
-      const key = qitsInteractionKey(pact, interaction);
+      const key = qitsInteractionKey(pair, interaction);
       if (!entries.has(key)) entries.set(key, interaction);
     }
   }
@@ -499,8 +549,8 @@ function groupsOf(
         pair: {
           role: interaction.role,
           consumer: interaction.consumer,
-          provider: interaction.provider,
           via: interaction.via,
+          provider: interaction.provider,
         },
         lines: [],
       };
@@ -515,6 +565,23 @@ function groupsOf(
     });
   }
   return groups;
+}
+
+/**
+ * `qitsPairKey` → the library's version pinned by the matching pact — the view's parallel to the
+ * CLI's `ContractsReportKind.viaVersions`. A pair's identity (`role`+`consumer`+`via`+`provider`)
+ * does not carry the version, since two releases of the same library are one pair, never two; the
+ * version a group's heading shows is looked up from the payload's own pact entries instead, which
+ * — unlike the identity — still carry the full `via` object.
+ */
+function viaVersions(payload: QitsContractsPayload | null): ReadonlyMap<string, string> {
+  const versions = new Map<string, string>();
+  for (const pact of payload?.pacts ?? []) {
+    const version = pact.via?.version;
+    if (!version) continue;
+    versions.set(qitsPairKey(qitsPactPair(pact)), version);
+  }
+  return versions;
 }
 
 /** The `contracts` kind's registration, payload version 1 — part of the standard kinds. */
