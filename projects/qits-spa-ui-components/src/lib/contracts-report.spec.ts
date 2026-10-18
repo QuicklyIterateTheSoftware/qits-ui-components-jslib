@@ -5,6 +5,8 @@ import { of } from 'rxjs';
 import { QITS_CONTRACTS_REPORT_KIND, QitsContractsReport } from './contracts-report';
 import {
   BASELINE_PROVIDER_ABSENT,
+  CONTRACTS_BASELINE,
+  CONTRACTS_REPORT,
   FULL_DIFF,
   NO_BASELINE,
   PROVIDER_ABSENT,
@@ -162,6 +164,73 @@ describe('QitsContractsReport', () => {
         .querySelector('.failed-interaction .qits-badge')
         ?.classList.contains('qits-badge-danger'),
     ).toBe(true);
+  });
+
+  it('renders no via segment for a direct pact', () => {
+    const fixture = render(FULL_DIFF);
+    click(fixture, '.inventory-toggle');
+    expect(has(fixture, '.via')).toBe(false);
+  });
+
+  it('draws a library pact as consumer → library (version) → provider, the library muted', () => {
+    const withVia = {
+      ...CONTRACTS_REPORT,
+      pacts: CONTRACTS_REPORT.pacts.map((pact, index) => {
+        if (index === 0) {
+          return {
+            ...pact,
+            via: {
+              repository: 'qits-eventstream-javalib',
+              artifact: 'eu.wohlben.qits:qits-eventstream',
+              version: '2026.1014.223716',
+            },
+          };
+        }
+        // No version: the label is the repository alone, with no parentheses.
+        if (index === 1) return { ...pact, via: { repository: 'qits-other-javalib' } };
+        return pact;
+      }),
+    };
+    const fixture = render({
+      report: contractsReport('r-contracts', withVia),
+      baseline: null,
+      context: contractsContext(false),
+    });
+    click(fixture, '.inventory-toggle');
+    expect(texts(fixture, '.pact-toggle')).toEqual([
+      'qits-fx-service → qits-eventstream-javalib (2026.1014.223716) → qits-events-service',
+      'qits-fx-service → qits-other-javalib → qits-projects-service',
+      'qits-landing-app → qits-fx-service',
+      'qits-workspaces-service → qits-fx-service',
+    ]);
+    const viaSpans = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll('.pact-toggle .via'),
+    ];
+    expect(viaSpans).toHaveLength(2);
+    expect(viaSpans.every((span) => span.classList.contains('muted'))).toBe(true);
+  });
+
+  it('draws a new library pact’s label the same way in the New section', () => {
+    const withVia = {
+      ...CONTRACTS_REPORT,
+      pacts: CONTRACTS_REPORT.pacts.map((pact) =>
+        pact.consumer === 'qits-fx-service' && pact.provider === 'qits-events-service'
+          ? {
+              ...pact,
+              via: { repository: 'qits-eventstream-javalib', version: '2026.1014.223716' },
+            }
+          : pact,
+      ),
+    };
+    const fixture = render({
+      report: contractsReport('r-contracts', withVia),
+      baseline: contractsReport('r-contracts-0', CONTRACTS_BASELINE),
+      context: contractsContext(true),
+    });
+    expect(texts(fixture, '.new .new-pair')).toEqual([
+      'consumer qits-fx-service → qits-eventstream-javalib (2026.1014.223716) → qits-events-service',
+      'provider qits-workspaces-service → qits-fx-service',
+    ]);
   });
 
   it('says plainly when the provider side was not reported, and removes nothing on it', () => {

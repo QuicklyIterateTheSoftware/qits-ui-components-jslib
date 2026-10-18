@@ -75,6 +75,17 @@ export interface QitsPactEntry {
   readonly specification: string | null;
   /** The file the pact was read from, relative to the repository root. */
   readonly source: string | null;
+  /**
+   * The library through which the consumer's calls to the provider go — a shared client such as
+   * `qits-eventstream-javalib` — carrying the library's repository, its artifact coordinate and the
+   * version pinned. Absent, or explicitly `null`, for a direct pact; the pact file's name is then
+   * `<consumer>_<library>_<provider>.json` rather than `<consumer>_<provider>.json`.
+   */
+  readonly via?: {
+    readonly repository: string;
+    readonly artifact?: string;
+    readonly version?: string;
+  } | null;
   readonly interactions: readonly QitsInteractionEntry[];
 }
 
@@ -96,11 +107,17 @@ export interface QitsContractsPayload {
   readonly truncated: boolean;
 }
 
-/** A pair's identity: role, consumer and provider, with the names as written in the pact. */
+/**
+ * A pair's identity: role, consumer and provider, with the names as written in the pact, plus the
+ * library the calls go through when this is a library pact (its repository is part of the
+ * identity — see {@link QitsPactEntry.via} — so a direct and a library pact for the same consumer
+ * and provider are two pairs, never one).
+ */
 export interface QitsContractPair {
   readonly role: QitsContractRole;
   readonly consumer: string;
   readonly provider: string;
+  readonly via?: QitsPactEntry['via'];
 }
 
 /** An interaction's identity: its pair, its description and its sorted provider-state names. */
@@ -174,6 +191,7 @@ export function readContractsPayload(value: unknown): QitsContractsPayload | nul
           provider,
           specification: text(pact['specification']),
           source: text(pact['source']),
+          via: readVia(pact['via']),
           interactions: records(pact['interactions'])
             .filter((interaction) => typeof interaction['description'] === 'string')
             .map(readInteraction),
@@ -202,6 +220,22 @@ function readInteraction(interaction: Record<string, unknown>): QitsInteractionE
     status: typeof status === 'number' && Number.isFinite(status) ? status : null,
     contentHash: text(interaction['contentHash']),
     verified: verified === 'OK' || verified === 'FAILED' ? verified : null,
+  };
+}
+
+/**
+ * `via`'s object, or `undefined` where it is absent, `null`, or has no `repository` — the same
+ * "not a library pact" outcome either way, so a report written before `via` existed and one that
+ * says `"via": null` read identically.
+ */
+function readVia(value: unknown): QitsPactEntry['via'] {
+  if (!isRecord(value)) return undefined;
+  const repository = text(value['repository']);
+  if (repository === null) return undefined;
+  return {
+    repository,
+    artifact: text(value['artifact']) ?? undefined,
+    version: text(value['version']) ?? undefined,
   };
 }
 

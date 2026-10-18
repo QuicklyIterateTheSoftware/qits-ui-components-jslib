@@ -14,7 +14,9 @@ import type {
  * shared fixture (`report/contracts/diff/` in qits-platform-access-cli), so they cannot drift.
  *
  * - a provider state is its `name`;
- * - a pair is `role` + `consumer` + `provider`;
+ * - a pair is `role` + `consumer` + `provider`, plus the library's repository when the pact goes
+ *   through one (`via`) — a direct and a library pact for the same consumer and provider are two
+ *   pairs;
  * - an interaction is its pair + `description` + its sorted provider-state names;
  * - a changed interaction has the same identity in both and a different `contentHash`;
  * - a role whose side is false in **either** report contributes nothing — a verification report
@@ -60,9 +62,13 @@ export function contractChanges(
   };
 }
 
-/** The identity key of a pair; JSON so no name can forge a separator. */
+/**
+ * The identity key of a pair; JSON so no name can forge a separator. The library's repository is
+ * part of it — null for a direct pact — so a direct and a library pact for the same consumer and
+ * provider stay two pairs, never one.
+ */
 export function qitsPairKey(pair: QitsContractPair): string {
-  return JSON.stringify([pair.role, pair.consumer, pair.provider]);
+  return JSON.stringify([pair.role, pair.consumer, pair.via?.repository ?? null, pair.provider]);
 }
 
 /** The identity key of an interaction of `pair`. */
@@ -73,6 +79,7 @@ export function qitsInteractionKey(
   return JSON.stringify([
     pair.role,
     pair.consumer,
+    pair.via?.repository ?? null,
     pair.provider,
     interaction.description,
     sortedStates(interaction.providerStates),
@@ -91,7 +98,12 @@ function pairsOf(
   const pairs = new Map<string, QitsContractPair>();
   for (const pact of pacts) {
     if (!compared(pact.role)) continue;
-    const pair = { role: pact.role, consumer: pact.consumer, provider: pact.provider };
+    const pair = {
+      role: pact.role,
+      consumer: pact.consumer,
+      provider: pact.provider,
+      via: pact.via,
+    };
     const key = qitsPairKey(pair);
     if (!pairs.has(key)) pairs.set(key, pair);
   }
@@ -125,6 +137,7 @@ function identityOf(
     role: pact.role,
     consumer: pact.consumer,
     provider: pact.provider,
+    via: pact.via,
     description: interaction.description,
     providerStates: sortedStates(interaction.providerStates),
   };
@@ -155,6 +168,7 @@ function comparePairs(a: QitsContractPair, b: QitsContractPair): number {
   return (
     compareText(a.role, b.role) ||
     compareText(a.consumer, b.consumer) ||
+    compareText(a.via?.repository ?? '', b.via?.repository ?? '') ||
     compareText(a.provider, b.provider)
   );
 }

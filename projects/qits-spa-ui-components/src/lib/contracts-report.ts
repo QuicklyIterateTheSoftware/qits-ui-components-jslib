@@ -76,7 +76,13 @@ const ROLE_TONE: Record<QitsContractRole, QitsBadgeTone> = {
         class="role"
         [label]="roleLabel(pair.role)"
         [tone]="roleTone(pair.role, tone)"
-      />&ngsp;<span class="pair">{{ pair.consumer }} → {{ pair.provider }}</span>
+      />&ngsp;<span class="pair"
+        >{{ pair.consumer }} →
+        @if (pair.via; as via) {
+          <span class="via muted">{{ viaLabel(via) }}</span> →
+        }
+        {{ pair.provider }}</span
+      >
     </ng-template>
     <ng-template #groups let-groups let-tone="tone">
       @for (group of groups; track group.key) {
@@ -226,7 +232,11 @@ const ROLE_TONE: Record<QitsContractRole, QitsBadgeTone> = {
                       [attr.aria-expanded]="isOpen(pact.key)"
                       (click)="togglePact(pact.key)"
                     >
-                      {{ pact.entry.consumer }} → {{ pact.entry.provider }}
+                      {{ pact.entry.consumer }} →
+                      @if (pact.entry.via; as via) {
+                        <span class="via muted">{{ viaLabel(via) }}</span> →
+                      }
+                      {{ pact.entry.provider }}
                     </button>
                     <span class="muted count">
                       {{ pact.entry.interactions.length }}
@@ -363,6 +373,11 @@ export class QitsContractsReport {
     return ROLE_LABEL[role] ?? String(role).toLowerCase();
   }
 
+  /** The library segment of a pair drawn through `via`: its repository, with the version pinned. */
+  protected viaLabel(via: { readonly repository: string; readonly version?: string }): string {
+    return via.version ? `${via.repository} (${via.version})` : via.repository;
+  }
+
   /** The role's own tone, unless a section mutes it. */
   protected roleTone(role: QitsContractRole, override?: QitsBadgeTone | null): QitsBadgeTone {
     return override ?? ROLE_TONE[role] ?? 'neutral';
@@ -485,6 +500,7 @@ function groupsOf(
           role: interaction.role,
           consumer: interaction.consumer,
           provider: interaction.provider,
+          via: interaction.via,
         },
         lines: [],
       };
