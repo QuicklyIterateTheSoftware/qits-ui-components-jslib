@@ -29,6 +29,7 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "tsConfig": "projects/qits-spa-ui-components/tsconfig.spec.json",
+            "include": ["**/*.spec.ts", "../testing/**/*.spec.ts"],
             "exclude": ["projects/qits-spa-ui-components/src/**/*.browser.spec.ts"]
           }
         },

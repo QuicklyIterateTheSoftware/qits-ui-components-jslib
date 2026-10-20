@@ -88,3 +88,19 @@ navigation and loses its state.
 
 Source, the component reference and the development commands are in the
 [repository README](https://github.com/QuicklyIterateTheSoftware/qits-ui-components-jslib).
+
+## Pacts of the calls it makes
+
+`@qits/ui-components/testing` records, in the consuming frontend's own specs, the pacts of the REST
+calls this package makes on that frontend's behalf — one line in `src/app/ui-components.pact.spec.ts`:
+
+```ts
+import { uiComponentsPact } from '@qits/ui-components/testing';
+import { appConfig } from './app.config';
+
+describe('@qits/ui-components pacts', () =>
+  uiComponentsPact({ consumer: 'qits-ci-frontend', appConfig, sources: 'src/app' }));
+```
+
+It needs `@pact-foundation/pact`, `@qits/angular` (optional peers) and the providers'
+golden-master packages as devDependencies. See the repository README for what it pacts and why.

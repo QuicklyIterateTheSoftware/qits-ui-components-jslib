@@ -5,7 +5,12 @@
   "compilerOptions": {
     "outDir": "../../out-tsc/spec",
     "types": ["vitest/globals", "node"],
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    // The testing entry point imports the library by its package name, as ng-packagr requires of a
+    // secondary entry point; its specs run against the sources, not a build.
+    "paths": {
+      "@qits/ui-components": ["./src/public-api.ts"]
+    }
   },
-  "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]
+  "include": ["src/**/*.d.ts", "src/**/*.spec.ts", "testing/**/*.spec.ts"]
 }

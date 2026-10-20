@@ -635,6 +635,50 @@ bolt and a sentence in a popover rather than anything the layout around it notic
 `provideQitsBuildList([…])` answers the same contract from a literal, with nothing fetched, nothing
 polled and no stream opened.
 
+## Pacts of the library's calls: `@qits/ui-components/testing`
+
+Every read above is a REST call this library makes on behalf of whichever SPA embeds it — to
+qits-edge, qits-projects, qits-ci and qits-githost. The library cannot pact them itself (ticket
+qits-1284): each SPA turns on a different set of features and pins its own version, and a pact
+naming the library as the consumer would claim every call for every SPA. So **each consuming
+frontend records them**, in one spec, through this package's secondary entry point:
+
+```ts
+// src/app/ui-components.pact.spec.ts
+import { uiComponentsPact } from '@qits/ui-components/testing';
+import { appConfig } from './app.config';
+
+describe('@qits/ui-components pacts', () =>
+  uiComponentsPact({ consumer: 'qits-ci-frontend', appConfig, sources: 'src/app' }));
+```
+
+`consumer` is the frontend's **repository** name. The helper boots `appConfig.providers`, counts a
+feature when its token resolves or when `src/app` uses a root-provided client, runs each feature's
+block through the library's real client against the provider's pact mock server, and writes one
+file per provider, `pacts/<consumer>_qits-ui-components-jslib_<provider>.json`, compared with the
+committed one (`QITS_GOLDEN_UPDATE=true npm test` rewrites it). Every interaction carries
+`qits-via` with the `@qits/ui-components` version the frontend resolves; a bump that changes only
+that label rewrites the file instead of failing. The guard fails the spec when a source uses a
+calling symbol (`provideQits*`, `QitsReportsClient`, `<qits-run-reports`, …) whose calls the pacts
+do not hold — a provider moved into a route, out of `appConfig`'s sight, cannot ship unpacted.
+
+| Feature        | Turned on by                                                          | Provider / operations                                                      | `qits-trigger.interaction`            |
+| -------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------- |
+| `NAVIGATION`   | `QITS_NAVIGATION` (`provideQitsNavigation`)                           | qits-edge-service `getMainNavigation`                                      | `show-main-navigation`                |
+| `PROJECTS`     | `QITS_PROJECTS` (`provideQitsProjects`)                               | qits-projects-service `listProjects`                                       | `show-project-picker`                 |
+| `REPOSITORIES` | `QITS_PROJECTS`/`QITS_REPOSITORIES`, `QitsProjectRepositoryLookup`    | qits-projects-service `listProjectRepositories`                            | `show-project-repositories`           |
+| `ACTIVE_RUNS`  | `QITS_BUILDS` (`provideQitsBuilds`)                                   | qits-ci-service `listActiveRuns`                                           | `show-active-builds`                  |
+| `RUN_REPORTS`  | `<qits-run-reports`, `QitsRunReports`, `QitsReportsClient` in sources | qits-ci-service `listRunReports`, `getRunReport`, `listRunBaselineReports` | `show-run-reports`, `open-run-report` |
+| `SOURCE_FILE`  | the code-preview failure insight (`provideQitsStandardReportKinds`)   | qits-githost-service `getRepositoryFile` (the file and its three 404s)     | `preview-failure-source`              |
+| `RAW_FILE`     | the screenshots report kind (`provideQitsStandardReportKinds`)        | qits-githost-service `getRaw` (`image/png` bytes)                          | `show-screenshot`                     |
+
+A consumer adds, as devDependencies, `@pact-foundation/pact` (17.1.4) and `@qits/angular` — both
+optional peers of this package — and the golden-master package of each provider it calls:
+`@qits/edge-golden-masters`, `@qits/projects-golden-masters`, `@qits/ci-golden-masters`,
+`@qits/githost-golden-masters`. Each block is exported on its own too (`UI_COMPONENTS_BLOCKS`), and
+this repository's own spec runs every one of them against a mock server, so the rows stay checked
+here; it commits no pact of its own.
+
 ## Install
 
 `@qits/ui-components` lives in the platform's own npm repository, not on npmjs. A consumer needs
@@ -727,7 +771,8 @@ export class RunSummary {
 `pnpm build` runs `scripts/check-exports.mjs` over the output: it is the manifest ng-packagr
 _writes_ that gets published, so the check reads that one — the package name, the version against
 `projects/qits-spa-ui-components/package.json`, the absence of a `private` flag, the peer ranges,
-and that every path in `exports` exists on disk. A publish that would have failed after a green
+that every path in `exports` exists on disk, and that the `./testing` entry point built, its two
+peers stayed optional and the main bundle imports nothing of it. A publish that would have failed after a green
 pipeline fails at build time instead.
 
 The workspace root is a harness: its `package.json` is `private: true` and carries only tooling.
