@@ -672,8 +672,9 @@ do not hold — a provider moved into a route, out of `appConfig`'s sight, canno
 | `SOURCE_FILE`  | the code-preview failure insight (`provideQitsStandardReportKinds`)   | qits-githost-service `getRepositoryFile` (the file and its three 404s)     | `preview-failure-source`              |
 | `RAW_FILE`     | the screenshots report kind (`provideQitsStandardReportKinds`)        | qits-githost-service `getRaw` (`image/png` bytes)                          | `show-screenshot`                     |
 
-A consumer adds, as devDependencies, `@pact-foundation/pact` (17.1.4) and `@qits/angular` — both
-optional peers of this package — and the golden-master package of each provider it calls:
+A consumer adds, as devDependencies, `@pact-foundation/pact` (17.1.4) and `@qits/angular` — which
+this package deliberately does not declare, not even as optional peers — and the golden-master
+package of each provider it calls:
 `@qits/edge-golden-masters`, `@qits/projects-golden-masters`, `@qits/ci-golden-masters`,
 `@qits/githost-golden-masters`. Each block is exported on its own too (`UI_COMPONENTS_BLOCKS`), and
 this repository's own spec runs every one of them against a mock server, so the rows stay checked
@@ -771,8 +772,8 @@ export class RunSummary {
 `pnpm build` runs `scripts/check-exports.mjs` over the output: it is the manifest ng-packagr
 _writes_ that gets published, so the check reads that one — the package name, the version against
 `projects/qits-spa-ui-components/package.json`, the absence of a `private` flag, the peer ranges,
-that every path in `exports` exists on disk, and that the `./testing` entry point built, its two
-peers stayed optional and the main bundle imports nothing of it. A publish that would have failed after a green
+that every path in `exports` exists on disk, and that the `./testing` entry point built, the
+manifest names neither pact nor `@qits/angular` and the main bundle imports nothing of it. A publish that would have failed after a green
 pipeline fails at build time instead.
 
 The workspace root is a harness: its `package.json` is `private: true` and carries only tooling.

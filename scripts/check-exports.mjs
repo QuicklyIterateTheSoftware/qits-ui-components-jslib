@@ -53,11 +53,22 @@ const walk = (node, path) => {
 };
 walk(dist.exports ?? {}, '');
 
-// An optional peer that dist lists as required would have npm install pact and @qits/angular into
-// every SPA's production tree, for a test helper.
-for (const [pkg, meta] of Object.entries(project.peerDependenciesMeta ?? {})) {
-  if (Boolean(dist.peerDependenciesMeta?.[pkg]?.optional) !== Boolean(meta?.optional)) {
-    fail(`peer drift: ${PROJECT} says ${pkg} optional=${meta?.optional}, dist does not agree`);
+// The testing entry point's own packages — pact and @qits/angular — are declared NOWHERE in the
+// published manifest, not even as optional peers. npm's arborist still walks an optional peer's
+// manifest while it builds the peer set: 2026.1020.212312 declared @qits/angular optional, arborist
+// followed its required @ngrx/signals to 22.x (Angular ^22), and every Angular-21 frontend's bump
+// of this package died in ERESOLVE without ever installing either. A consumer that runs the pacts
+// adds both as devDependencies itself; ng-packagr leaves the imports external either way.
+for (const pkg of ['@pact-foundation/pact', '@qits/angular']) {
+  for (const section of [
+    'dependencies',
+    'peerDependencies',
+    'peerDependenciesMeta',
+    'optionalDependencies',
+  ]) {
+    if (dist[section]?.[pkg] !== undefined) {
+      fail(`dist/package.json ${section} names ${pkg}: a consumer's npm would resolve it on bump`);
+    }
   }
 }
 
@@ -75,7 +86,7 @@ if (!dist.exports?.['./package.json']) {
   fail(`exports["./package.json"] is missing: a consumer could not resolve this package's version`);
 }
 
-// The testing entry point is Node-side and depends on its optional peers, never the reverse: the
+// The testing entry point is Node-side and depends on pact and @qits/angular, never the reverse: the
 // main bundle must not reach for pact, @qits/angular, node: builtins or the testing entry itself.
 const main = dist.exports?.['.']?.default;
 if (typeof main === 'string' && existsSync(resolve(DIST, main))) {

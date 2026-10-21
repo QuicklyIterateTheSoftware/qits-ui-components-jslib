@@ -102,5 +102,5 @@ describe('@qits/ui-components pacts', () =>
   uiComponentsPact({ consumer: 'qits-ci-frontend', appConfig, sources: 'src/app' }));
 ```
 
-It needs `@pact-foundation/pact`, `@qits/angular` (optional peers) and the providers'
-golden-master packages as devDependencies. See the repository README for what it pacts and why.
+It needs `@pact-foundation/pact`, `@qits/angular` and the providers' golden-master packages as
+the consumer's own devDependencies; this package declares none of them. See the repository README for what it pacts and why.
