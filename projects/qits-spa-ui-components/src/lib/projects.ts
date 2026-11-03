@@ -59,8 +59,7 @@ export const QITS_PROJECTS = new InjectionToken<QitsProjectsSource>('QITS_PROJEC
  * `applications.qits-projects.origin` the navigation serves (see `QitsAppLinks.apiOrigin`).
  *
  * The edge routes an application's paths on its own host only, so from any other SPA this is a
- * cross-origin call: it waits for the navigation to say where qits-projects is, and carries the
- * session with `withCredentials`. A SPA asking *its own* backend for projects would be asking a
+ * cross-origin call: it waits for the navigation to say where qits-projects is, and the app's `qitsBearerInterceptor` (`@qits/angular`) signs it with the bearer. A SPA asking *its own* backend for projects would be asking a
  * service that does not own them.
  */
 export const QITS_PROJECTS_URL = '/projects/api/projects';
@@ -88,17 +87,15 @@ class HttpProjectsSource implements QitsProjectsSource {
     const http = inject(HttpClient);
     let cancel: (() => void) | undefined;
     const ask = (target: string) => {
-      const subscription = http
-        .get<QitsProjectEntries>(target, { withCredentials: true })
-        .subscribe({
-          next: (body) => this.answered.set((body?.entries ?? []).map((entry) => entry.project)),
-          // A list that could not be fetched is not a failed application: every page still
-          // renders, the chrome just cannot say which projects there are. The layout draws that.
-          error: () => {
-            this.answered.set([]);
-            this.gaveUp.set(true);
-          },
-        });
+      const subscription = http.get<QitsProjectEntries>(target).subscribe({
+        next: (body) => this.answered.set((body?.entries ?? []).map((entry) => entry.project)),
+        // A list that could not be fetched is not a failed application: every page still
+        // renders, the chrome just cannot say which projects there are. The layout draws that.
+        error: () => {
+          this.answered.set([]);
+          this.gaveUp.set(true);
+        },
+      });
       cancel = () => subscription.unsubscribe();
     };
     if (url !== undefined) {

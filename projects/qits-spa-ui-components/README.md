@@ -4,7 +4,10 @@ Angular components shared across qits frontends: `QitsButton`, `QitsBadge`, `Qit
 and the application skeleton `QitsMainLayout`. Standalone, `OnPush`, self-contained styles;
 `@angular/core` and `@angular/common` are peers, and `@angular/router` for the layout's
 `<router-outlet />`. The layout's navigation comes over `@angular/common/http`, a subpath of a peer
-already there — nothing new to install.
+already there — nothing new to install. The build stream opens through `@qits/angular`'s
+`QITS_EVENT_SOURCE` (`>= 2026.1103.125108`), which the app itself depends on: this package imports
+it but does not declare it, so an app bumping this package needs that `@qits/angular` too. Platform
+reads go through the app's `HttpClient`; add `@qits/angular`'s `qitsBearerInterceptor` there.
 
 ## Install
 
@@ -30,18 +33,18 @@ import { QitsBadge, QitsButton, QitsCard } from '@qits/ui-components';
     </qits-card>
   `,
 })
-export class RunSummary { /* … */ }
+export class RunSummary {
+  /* … */
+}
 ```
 
-`QitsMainLayout` is the root *route* component, not a wrapper tag — mounting it there is what keeps
+`QitsMainLayout` is the root _route_ component, not a wrapper tag — mounting it there is what keeps
 the chrome alive across navigation:
 
 ```ts
 import { provideQitsNavigation, QitsMainLayout } from '@qits/ui-components';
 
-export const routes: Routes = [
-  { path: '', component: QitsMainLayout, children: [/* the app */] },
-];
+export const routes: Routes = [{ path: '', component: QitsMainLayout, children: [/* the app */] }];
 
 bootstrapApplication(App, {
   providers: [provideHttpClient(), provideRouter(routes), provideQitsNavigation()],

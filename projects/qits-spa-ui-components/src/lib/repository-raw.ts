@@ -14,7 +14,8 @@ export const QITS_REPOSITORY_RAW_CACHE_SIZE = 40;
  *
  * The read goes to **qits-githost's own origin** — `QitsAppLinks.apiOrigin('qits-githost')` — and
  * waits for the navigation to state it, the way `provideQitsBuilds` waits for qits-ci's; nothing
- * here composes a hostname. It carries the session with `withCredentials: true`.
+ * here composes a hostname. It goes through the app's `HttpClient`, whose `qitsBearerInterceptor`
+ * (`@qits/angular`) signs it with the bearer.
  *
  * It keeps the last {@link QITS_REPOSITORY_RAW_CACHE_SIZE} answers in memory, keyed by repository,
  * revision and path, so re-opening a screenshot costs nothing: at a commit sha the answer can never
@@ -61,7 +62,6 @@ export class QitsRepositoryRawClient {
           .get(this.links.apiUrl('qits-githost', url) ?? url, {
             params: new HttpParams().set('rev', rev).set('path', path),
             responseType: 'blob',
-            withCredentials: true,
           })
           .subscribe({ next: resolve, error: reject });
       });

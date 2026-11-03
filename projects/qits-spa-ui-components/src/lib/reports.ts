@@ -253,8 +253,9 @@ export const QITS_REPORTS_PATH = '/ci/api/runs';
  *
  * Every read goes to **qits-ci's own origin** — `QitsAppLinks.apiOrigin('qits-ci')`, the origin the
  * navigation states — and waits for the navigation to state it, exactly as `provideQitsBuilds`
- * does; nothing here composes a hostname. Every read carries the session with
- * `withCredentials: true`, which a cross-origin call needs and a same-origin one ignores.
+ * does; nothing here composes a hostname. Every read goes through the app's `HttpClient`, whose
+ * `qitsBearerInterceptor` (`@qits/angular`) signs it with the bearer — not the session cookie, which
+ * the edge no longer turns into an identity (qits-1373).
  *
  * Injectable on purpose rather than a set of functions: a story or a spec replaces the whole read
  * with `{ provide: QitsReportsClient, useValue: fake }`.
@@ -307,9 +308,7 @@ export class QitsReportsClient {
     // The wait for the navigation starts on subscribe, and an unsubscribed read costs nothing;
     // `apiUrl` is read after the wait, when it is known to be defined.
     return this.origin().pipe(
-      switchMap(() =>
-        this.http.get<T>(this.links.apiUrl('qits-ci', path) ?? path, { withCredentials: true }),
-      ),
+      switchMap(() => this.http.get<T>(this.links.apiUrl('qits-ci', path) ?? path)),
     );
   }
 }

@@ -86,8 +86,9 @@ export class QitsAppLinks {
    *   relative call made now goes to this SPA's own host, which no longer routes another
    *   application's paths. Reading this inside a `computed`/`effect` re-runs when the answer
    *   lands; outside one, use {@link whenApiOrigin}.
-   * - an origin: the application's own, no trailing slash. The call is cross-origin and has to
-   *   carry the session itself — `credentials: 'include'` / `withCredentials: true`.
+   * - an origin: the application's own, no trailing slash. The call is cross-origin, and signed in
+   *   with the bearer the app's `qitsBearerInterceptor` (`@qits/angular`) adds to platform URLs —
+   *   not with the session cookie, which the edge no longer turns into an identity (qits-1373).
    * - `''`: the navigation answered (or gave up) and named no origin for this application, or there
    *   is no navigation provided at all. The path is used as it is, same-origin — exactly the call
    *   every SPA made before the field existed, which keeps an edge that does not serve it working.

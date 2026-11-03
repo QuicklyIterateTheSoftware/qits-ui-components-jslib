@@ -35,8 +35,8 @@ opened the panel over it.
 A release request's QA run submits structured **reports** to qits-ci — `test-results`,
 `coverage`, `contracts`, `entity-changes` and `screenshots` today, more kinds later — and `<qits-run-reports>` is the one area both pages draw them
 in. It is the second component here that reads for itself, on the bolt's terms: qits-ci's own origin
-(`QitsAppLinks.apiOrigin('qits-ci')`), after the navigation has said where that is, with
-`withCredentials`. `QitsReportsClient` is the whole of that door — the summaries, one report, the
+(`QitsAppLinks.apiOrigin('qits-ci')`), after the navigation has said where that is, signed in with
+the bearer the app's `qitsBearerInterceptor` adds. `QitsReportsClient` is the whole of that door — the summaries, one report, the
 baseline, and the baseline's reports of a kind — and a story or a spec replaces it with a literal.
 
 ```ts
@@ -83,7 +83,7 @@ screenshot baselines the fold adds, changes and removes against the baseline tag
 with a banner when the renderer fingerprint moved. Rows are collapsed and **no image is read until
 one is opened** — a real change lists a hundred. An open row reads its bytes through
 `QitsRepositoryRawClient`, qits-githost's raw door on its own origin (`apiOrigin('qits-githost')`,
-`withCredentials`, the last 40 answers kept), at the baseline's commit and at the fold. A changed
+the bearer, the last 40 answers kept), at the baseline's commit and at the fold. A changed
 screenshot is shown side by side, as a Diff (the after image dimmed, differing pixels in a solid
 accent) or as an Onion with an opacity slider; `diffScreenshots(before, after)` is the pure pixel
 comparison behind the count, exact RGBA over the union of both sizes, and decoding goes through
@@ -215,8 +215,8 @@ would be asking a service that knows what it does and nothing about what is depl
 `/main-navigation` is asked of the SPA's own host, which the edge answers on every vhost. The
 projects reads go to **qits-projects' own origin** — the edge routes an application's paths on its
 own host only — which the navigation states as `applications.qits-projects.origin`
-(`QitsAppLinks.apiOrigin`, below). They wait for the navigation to answer, and carry the session
-cross-origin with `withCredentials`; where the navigation names no origin they fall back to the bare
+(`QitsAppLinks.apiOrigin`, below). They wait for the navigation to answer, and go through the app's
+`HttpClient`, whose `qitsBearerInterceptor` signs them with the bearer; where the navigation names no origin they fall back to the bare
 same-origin path, which is what an edge that predates the field still routes.
 
 **`provideQitsNavigation()`** issues one `GET /main-navigation` for the life of the application. The
@@ -363,14 +363,15 @@ await appLinks.whenApiUrl('qits-projects', '/projects/api/projects'); // waits f
 | `apiOrigin(app)` | means                                                                 | the caller                       |
 | ---------------- | --------------------------------------------------------------------- | -------------------------------- |
 | `undefined`      | the navigation has not answered yet                                   | **waits**                        |
-| an origin        | the application's own, no trailing slash                              | calls it, with credentials       |
+| an origin        | the application's own, no trailing slash                              | calls it, with the bearer        |
 | `''`             | answered (or failed) with no origin for it, or no navigation provided | calls the bare path, same-origin |
 
 `apiOrigin`/`apiUrl` read a signal, so inside a `computed` or `effect` they re-run when the answer
 lands; `whenApiOrigin(app)`/`whenApiUrl(app, path)` are the promise forms, resolving at once when the
-navigation has already answered and never rejecting. A cross-origin call has to carry the session
-itself: `fetch(url, { credentials: 'include' })`, `HttpClient` with `withCredentials: true`,
-`new EventSource(url, { withCredentials: true })`. The hosted entry's origin is deliberately **not**
+navigation has already answered and never rejecting. A cross-origin call is signed in with the
+bearer, never the session cookie, which the edge no longer turns into an identity (qits-1373):
+`HttpClient` through `qitsBearerInterceptor`, `QitsBearerFetch.fetch(url)` for a raw `fetch`, and
+`QITS_EVENT_SOURCE` for a stream, all from `@qits/angular`'s `provideQitsBearerSignIn`. The hosted entry's origin is deliberately **not**
 a fallback: an edge too old to serve `applications.<app>.origin` is also too old to answer the CORS
 request such a call would be. `origin(app)` and `apiDocsUrl(app)` prefer the declared origin too,
 so an application with no navigation entry still has its own address.
@@ -511,8 +512,8 @@ bootstrapApplication(App, {
 }
 ```
 
-`GET /ci/api/runs/active` on **qits-ci's own origin** (`apiOrigin('qits-ci')`), with the session
-carried by `withCredentials`; nothing is read, opened or timed before the navigation has answered,
+`GET /ci/api/runs/active` on **qits-ci's own origin** (`apiOrigin('qits-ci')`), signed in with the
+bearer by the app's `qitsBearerInterceptor`; nothing is read, opened or timed before the navigation has answered,
 and no origin is compiled in here. **That listing is the single
 source of truth** and the only thing ever drawn; everything below is about when to read it again.
 
@@ -522,8 +523,11 @@ and after that whenever the platform says something happened —
 
     GET /events/api/stream?names=BuildStatusChanged,BuildSuccessful,BuildFailed
 
-an `EventSource` on **qits-events' own origin** (`apiOrigin('qits-events')`), opened
-`withCredentials` so the cookie crosses origins. `BuildStatusChanged` fires on every transition of a run's status — queued, started, and
+a stream on **qits-events' own origin** (`apiOrigin('qits-events')`), opened through
+`QITS_EVENT_SOURCE`, which defaults to `@qits/angular`'s: under `provideQitsBearerSignIn` a
+`FetchEventSource` with the bearer, otherwise the browser's `EventSource`. `@qits/angular` is
+imported by the main entry but declared nowhere in this package's manifest — every consuming app
+depends on it directly, and a declared peer is what broke their bumps once (qits-1284). `BuildStatusChanged` fires on every transition of a run's status — queued, started, and
 each terminal state — so both edges of the active listing are announced. A frame carries **nothing
 this library reads**: it means only "go and look", and a burst of them is coalesced into one read
 (250ms). Every connect re-reads, **reconnects included** — the stream is live-only, with no replay,
@@ -773,7 +777,9 @@ export class RunSummary {
 _writes_ that gets published, so the check reads that one — the package name, the version against
 `projects/qits-spa-ui-components/package.json`, the absence of a `private` flag, the peer ranges,
 that every path in `exports` exists on disk, and that the `./testing` entry point built, the
-manifest names neither pact nor `@qits/angular` and the main bundle imports nothing of it. A publish that would have failed after a green
+manifest names neither pact nor `@qits/angular` and the main bundle imports nothing of the testing
+side (pact, `@qits/angular/testing`, `./testing`). The main bundle does import `@qits/angular`
+itself, for its `QITS_EVENT_SOURCE` (epic qits-543), still undeclared. A publish that would have failed after a green
 pipeline fails at build time instead.
 
 The workspace root is a harness: its `package.json` is `private: true` and carries only tooling.

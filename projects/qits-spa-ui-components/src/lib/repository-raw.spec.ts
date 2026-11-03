@@ -34,12 +34,12 @@ describe('QitsRepositoryRawClient', () => {
 
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
-  it('reads qits-githost’s raw door on its own origin, as a blob, with the session, path encoded', async () => {
+  it('reads qits-githost’s raw door on its own origin, as a blob, without the cookie, path encoded', async () => {
     const { client, http } = setup();
     const read = client.raw(REPO, 'abc123', 'src/a b/x&y+z.png');
     const request = http.expectOne((r) => r.url === RAW);
     expect(request.request.method).toBe('GET');
-    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.withCredentials).toBe(false);
     expect(request.request.responseType).toBe('blob');
     expect(request.request.params.get('rev')).toBe('abc123');
     expect(request.request.params.get('path')).toBe('src/a b/x&y+z.png');

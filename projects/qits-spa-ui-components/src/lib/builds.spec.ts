@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { QITS_EVENT_SOURCE as QITS_SIGN_IN_EVENT_SOURCE } from '@qits/angular';
 
 import {
   buildConfigName,
@@ -587,13 +588,13 @@ describe('provideQitsBuilds across origins', () => {
     expect(builds.runs()).toBeUndefined();
   });
 
-  it('reads the listing on qits-ci and opens the stream on qits-events, with the session', () => {
+  it('reads the listing on qits-ci and opens the stream on qits-events, without the cookie', () => {
     const builds = source();
     tree.set(toNavTree(ORIGINS));
     TestBed.tick();
 
     const request = http().expectOne(`https://ci.qits.example${QITS_BUILDS_URL}`);
-    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.withCredentials).toBe(false);
     request.flush({ runs: [{ id: 'run-1', repoName: 'qits-ci-service', status: 'RUNNING' }] });
     expect(builds.runs()).toHaveLength(1);
     expect(streams.map((stream) => stream.url)).toEqual([
@@ -614,7 +615,8 @@ describe('provideQitsBuilds across origins', () => {
 describe('QITS_EVENT_SOURCE', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('opens the browser stream with credentials, because it lives on another origin', () => {
+  /** A browser `EventSource` that records how it was opened. */
+  function stubEventSource(): { url: string; init: EventSourceInit | undefined }[] {
     const opened: { url: string; init: EventSourceInit | undefined }[] = [];
     vi.stubGlobal(
       'EventSource',
@@ -624,10 +626,45 @@ describe('QITS_EVENT_SOURCE', () => {
         }
       },
     );
+    return opened;
+  }
+
+  it("opens the stream through @qits/angular's QITS_EVENT_SOURCE, the bearer's under the sign-in", () => {
+    const opened = stubEventSource();
+    const stream = { onopen: null, onmessage: null, onerror: null, readyState: 0, close: vi.fn() };
+    const signedIn = vi.fn(() => stream);
+    TestBed.configureTestingModule({
+      providers: [{ provide: QITS_SIGN_IN_EVENT_SOURCE, useValue: signedIn }],
+    });
+
+    const source = TestBed.inject(QITS_EVENT_SOURCE)?.('https://events.qits.example/s');
+
+    expect(signedIn).toHaveBeenCalledWith('https://events.qits.example/s');
+    expect(source).toBe(stream);
+    expect(opened).toEqual([]);
+  });
+
+  it("without the sign-in, @qits/angular's default opens the browser's EventSource", () => {
+    const opened = stubEventSource();
     TestBed.inject(QITS_EVENT_SOURCE)?.('https://events.qits.example/events/api/stream');
 
-    expect(opened).toEqual([
-      { url: 'https://events.qits.example/events/api/stream', init: { withCredentials: true } },
+    expect(opened.map((entry) => entry.url)).toEqual([
+      'https://events.qits.example/events/api/stream',
     ]);
+  });
+
+  it('falls back to the browser EventSource, without credentials, when the token answers nothing', () => {
+    const opened = stubEventSource();
+    TestBed.configureTestingModule({
+      providers: [{ provide: QITS_SIGN_IN_EVENT_SOURCE, useValue: null }],
+    });
+    TestBed.inject(QITS_EVENT_SOURCE)?.('https://events.qits.example/s');
+
+    expect(opened).toEqual([{ url: 'https://events.qits.example/s', init: undefined }]);
+  });
+
+  it('is null where there is no EventSource at all (a server render)', () => {
+    vi.stubGlobal('EventSource', undefined);
+    expect(TestBed.inject(QITS_EVENT_SOURCE)).toBeNull();
   });
 });

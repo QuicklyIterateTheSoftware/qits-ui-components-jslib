@@ -86,15 +86,17 @@ if (!dist.exports?.['./package.json']) {
   fail(`exports["./package.json"] is missing: a consumer could not resolve this package's version`);
 }
 
-// The testing entry point is Node-side and depends on pact and @qits/angular, never the reverse: the
-// main bundle must not reach for pact, @qits/angular, node: builtins or the testing entry itself.
+// The testing entry point is Node-side and depends on pact and @qits/angular/testing, never the
+// reverse: the main bundle must not reach for pact, @qits/angular/testing, node: builtins or the
+// testing entry itself. It does import @qits/angular's root entry, for QITS_EVENT_SOURCE (epic
+// qits-543): every consuming app depends on @qits/angular directly, so it stays undeclared above.
 const main = dist.exports?.['.']?.default;
 if (typeof main === 'string' && existsSync(resolve(DIST, main))) {
   const imports = [...readFileSync(resolve(DIST, main), 'utf8').matchAll(/from '([^']+)'/g)].map(
     (match) => match[1],
   );
   for (const forbidden of imports.filter((name) =>
-    /^(node:|@pact-foundation\/|@qits\/angular|@qits\/ui-components\/testing|@angular\/core\/testing)/.test(
+    /^(node:|@pact-foundation\/|@qits\/angular\/testing|@qits\/ui-components\/testing|@angular\/core\/testing)/.test(
       name,
     ),
   )) {

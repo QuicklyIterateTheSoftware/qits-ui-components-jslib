@@ -9,6 +9,7 @@ import {
   type EnvironmentProviders,
   type Signal,
 } from '@angular/core';
+import { QITS_EVENT_SOURCE as QITS_SIGN_IN_EVENT_SOURCE } from '@qits/angular';
 
 import { afterApiOrigin, QitsAppLinks } from './app-links';
 
@@ -149,8 +150,10 @@ export const QITS_BUILDS = new InjectionToken<QitsBuildsSource>('QITS_BUILDS');
  * Where the active runs are asked for: this path, on **qits-ci's own origin** — the
  * `applications.qits-ci.origin` the navigation serves (`QitsAppLinks.apiOrigin`). The edge routes
  * `/ci` on qits-ci's host only, so from any other SPA this is a cross-origin read that waits for the
- * navigation to say where qits-ci is and carries the session with `withCredentials`. No origin is
- * compiled in here: only the edge knows it.
+ * navigation to say where qits-ci is. It goes through the app's `HttpClient`, whose
+ * `qitsBearerInterceptor` (`@qits/angular`) signs it with the bearer: the edge no longer asserts an
+ * identity from the session cookie (qits-1373). No origin is compiled in here: only the edge knows
+ * it.
  *
  * **This listing is the single source of truth**, and the only one. Everything below is about when
  * to read it again, never about what it says.
@@ -159,8 +162,8 @@ export const QITS_BUILDS_URL = '/ci/api/runs/active';
 
 /**
  * The live stream that says *something has happened, go and look* — this path on **qits-events'
- * own origin** (`QitsAppLinks.apiOrigin('qits-events')`), for {@link QITS_BUILDS_URL}'s reason, and
- * opened `withCredentials` so the session reaches it across origins.
+ * own origin** (`QitsAppLinks.apiOrigin('qits-events')`), for {@link QITS_BUILDS_URL}'s reason,
+ * opened through {@link QITS_EVENT_SOURCE}, which signs it with the bearer.
  *
  * <p>The three names are the whole run lifecycle. `BuildStatusChanged` fires on every transition of
  * a run's status — queued, started, and each terminal state — so **both edges of the active
@@ -216,8 +219,8 @@ export const QITS_BUILDS_STREAM_ATTEMPTS = 2;
  * — an `EventSource` is opened by the browser and never goes through `HttpClient` — so the seam has
  * to be the constructor itself, and this interface is what both sides of it agree on. Deliberately
  * smaller than the real thing: no `addEventListener`, because the frames this reads are
- * unnamed-event-only, and no `withCredentials` property, because whether the stream carries the
- * session is the factory's decision when it opens one — and the default factory always does.
+ * unnamed-event-only, and no `withCredentials` property, because how the stream is signed in is
+ * the factory's decision when it opens one — the default's is `@qits/angular`'s bearer.
  */
 export interface QitsEventSourceLike {
   onopen: ((event: Event) => void) | null;
@@ -237,8 +240,14 @@ export type QitsEventSourceFactory = (url: string) => QitsEventSourceLike;
  * coalesced burst, the fall back to an interval — and none of it is reachable without driving
  * `onopen`, `onmessage` and `onerror` by hand.
  *
- * <p>The default opens `new EventSource(url, { withCredentials: true })`: the stream lives on
- * qits-events' own origin, and without the flag a cross-origin `EventSource` carries no cookie.
+ * <p>The default is `@qits/angular`'s `QITS_EVENT_SOURCE`: under `provideQitsBearerSignIn` a
+ * `FetchEventSource`, which reads the stream with `fetch()` and `Authorization: Bearer` (the edge
+ * no longer asserts an identity from the session cookie, qits-1373, and `EventSource` cannot send a
+ * header), and behaves like `EventSource` — `onopen`, a reconnect after a drop, a refusal final.
+ * Without the sign-in, that token answers the browser's own `EventSource`. `@qits/angular` is
+ * imported, not declared: every consuming app depends on it directly, and a declared peer is what
+ * broke their bumps once (qits-1284, see `scripts/check-exports.mjs`). Should the token be absent
+ * all the same, the browser's `EventSource` opens the stream.
  *
  * <p>`null` is a supported answer and the default one off a browser: an SPA rendered on a server
  * has no `EventSource` constructor, and a source that threw there would take the whole chrome down
@@ -249,10 +258,13 @@ export const QITS_EVENT_SOURCE = new InjectionToken<QitsEventSourceFactory | nul
   'QITS_EVENT_SOURCE',
   {
     providedIn: 'root',
-    factory: () =>
-      typeof EventSource === 'undefined'
-        ? null
-        : (url: string) => new EventSource(url, { withCredentials: true }) as QitsEventSourceLike,
+    factory: () => {
+      if (typeof EventSource === 'undefined') return null;
+      const signedIn = inject(QITS_SIGN_IN_EVENT_SOURCE, { optional: true });
+      return signedIn
+        ? (url: string) => signedIn(url) as QitsEventSourceLike
+        : (url: string) => new EventSource(url) as QitsEventSourceLike;
+    },
   },
 );
 
@@ -534,21 +546,19 @@ class HttpBuildsSource implements QitsBuildsSource {
   private read(): void {
     if (this.url === undefined) return;
     this.cancel?.();
-    const subscription = this.http
-      .get<QitsBuildRuns>(this.url, { withCredentials: true })
-      .subscribe({
-        next: (body) => {
-          this.answered.set(toBuilds(body));
-          this.gaveUp.set(false);
-        },
-        // A listing that could not be fetched is not a failed application. The bolt draws itself as
-        // unanswered, the panel says one quiet line, and every page around it renders exactly as it
-        // did — which is the whole point on a host where `/ci` is not routed at all.
-        error: () => {
-          this.answered.set([]);
-          this.gaveUp.set(true);
-        },
-      });
+    const subscription = this.http.get<QitsBuildRuns>(this.url).subscribe({
+      next: (body) => {
+        this.answered.set(toBuilds(body));
+        this.gaveUp.set(false);
+      },
+      // A listing that could not be fetched is not a failed application. The bolt draws itself as
+      // unanswered, the panel says one quiet line, and every page around it renders exactly as it
+      // did — which is the whole point on a host where `/ci` is not routed at all.
+      error: () => {
+        this.answered.set([]);
+        this.gaveUp.set(true);
+      },
+    });
     this.cancel = () => subscription.unsubscribe();
   }
 }
@@ -572,7 +582,7 @@ class HttpBuildsSource implements QitsBuildsSource {
  * <p>`eventSource` is the constructor seam: a fake for a spec, and **`null` for no stream at all**,
  * which is the whole of how an application opts out — the count then rides the fallback interval,
  * which is exactly what a browser that cannot hold the stream ends up doing anyway. Left unsaid it
- * is {@link QITS_EVENT_SOURCE}, the browser's own.
+ * is {@link QITS_EVENT_SOURCE}: `@qits/angular`'s, with the bearer under the sign-in.
  */
 export function provideQitsBuilds(options?: {
   readonly url?: string;

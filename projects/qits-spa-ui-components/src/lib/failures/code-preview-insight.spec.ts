@@ -150,7 +150,7 @@ describe('the code preview inside the test results', () => {
     fixture.detectChanges();
   }
 
-  it('reads nothing until a failure is opened, then reads its file once, on githost, with the session', async () => {
+  it('reads nothing until a failure is opened, then reads its file once, on githost, without the cookie', async () => {
     const http = configure();
     const fixture = render([failure(), failure({ testName: 'other', lineStart: 7, lineEnd: 8 })]);
     http.expectNone(() => true);
@@ -158,7 +158,7 @@ describe('the code preview inside the test results', () => {
     open(fixture, 0);
     const read = expectRead(http);
     expect(read.request.method).toBe('GET');
-    expect(read.request.withCredentials).toBe(true);
+    expect(read.request.withCredentials).toBe(false);
     expect(read.request.params.get('rev')).toBe(SHA);
     expect(read.request.params.get('path')).toBe(FILE);
     read.flush({ path: FILE, binary: false, size: 100, content: source(10) });
@@ -394,7 +394,7 @@ describe('QitsCodePreview where the live listing does not cover the failure', ()
   function expectListing(http: HttpTestingController, projectId: string) {
     const request = http.expectOne(listingUrl(projectId));
     expect(request.request.method).toBe('GET');
-    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.withCredentials).toBe(false);
     return request;
   }
 

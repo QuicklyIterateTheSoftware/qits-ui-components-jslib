@@ -115,11 +115,11 @@ describe('QitsRunReports', () => {
 
   afterEach(() => http().verify());
 
-  it('reads the summaries on qits-ci’s own origin, with the session', () => {
+  it('reads the summaries on qits-ci’s own origin, without the cookie', () => {
     setup();
     const request = http().expectOne(`${RUNS}/run-1/reports`);
     expect(request.request.method).toBe('GET');
-    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.withCredentials).toBe(false);
     request.flush(runReports([]));
   });
 
@@ -216,9 +216,9 @@ describe('QitsRunReports', () => {
     toggles(fixture)[1].click();
     fixture.detectChanges();
     const payload = http().expectOne(`${RUNS}/run-1/reports/r-cov`);
-    expect(payload.request.withCredentials).toBe(true);
+    expect(payload.request.withCredentials).toBe(false);
     const baseline = http().expectOne(`${RUNS}/run-1/baseline/reports/coverage`);
-    expect(baseline.request.withCredentials).toBe(true);
+    expect(baseline.request.withCredentials).toBe(false);
     payload.flush({
       ...summary({ id: 'r-cov', kind: 'coverage' }),
       payload: {
@@ -363,7 +363,7 @@ describe('QitsRunReports', () => {
 });
 
 describe('QitsReportsClient', () => {
-  it('reads the baseline and its reports on qits-ci’s origin, with the session', () => {
+  it('reads the baseline and its reports on qits-ci’s origin, without the cookie', () => {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -380,20 +380,20 @@ describe('QitsReportsClient', () => {
     let baseline: unknown = 'unset';
     client.baseline('run 1').subscribe((value) => (baseline = value));
     const one = http.expectOne(`${RUNS}/run%201/baseline`);
-    expect(one.request.withCredentials).toBe(true);
+    expect(one.request.withCredentials).toBe(false);
     one.flush({ baseline: null });
     expect(baseline).toBeNull();
 
     let reports: unknown;
     client.baselineReports('run-1', 'coverage').subscribe((value) => (reports = value));
     const two = http.expectOne(`${RUNS}/run-1/baseline/reports/coverage`);
-    expect(two.request.withCredentials).toBe(true);
+    expect(two.request.withCredentials).toBe(false);
     two.flush([]);
     expect(reports).toEqual([]);
     http.verify();
   });
 
-  it('goes same-origin, still with the session, where no navigation is provided', () => {
+  it('goes same-origin, still without the cookie, where no navigation is provided', () => {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
@@ -401,7 +401,7 @@ describe('QitsReportsClient', () => {
     const request = TestBed.inject(HttpTestingController).expectOne(
       '/ci/api/runs/run-1/reports/r-1',
     );
-    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.withCredentials).toBe(false);
     request.flush({});
   });
 });

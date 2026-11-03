@@ -80,7 +80,7 @@ export function qitsReportKindFor(
  *   says there is no view for it here; a run with no reports says "Not reported."; a failed read is
  *   one muted line.
  *
- * Every read goes to qits-ci's own origin with the session — see {@link QitsReportsClient}.
+ * Every read goes to qits-ci's own origin with the bearer — see {@link QitsReportsClient}.
  */
 @Component({
   selector: 'qits-run-reports',

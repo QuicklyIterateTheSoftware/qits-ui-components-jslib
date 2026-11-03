@@ -44,7 +44,8 @@ const NOT_FOUND = new Set(['no-such-repository', 'no-such-rev', 'no-such-path'])
  *
  * The read goes to **qits-githost's own origin** — `QitsAppLinks.apiOrigin('qits-githost')` — and
  * waits for the navigation to state it, the way `provideQitsBuilds` waits for qits-ci's; nothing
- * here composes a hostname. It carries the session with `withCredentials: true`.
+ * here composes a hostname. It goes through the app's `HttpClient`, whose `qitsBearerInterceptor`
+ * (`@qits/angular`) signs it with the bearer.
  *
  * Root-provided and replaceable: a story or a spec stands in for the whole read with
  * `{ provide: QitsSourceFiles, useValue: fake }`.
@@ -78,7 +79,6 @@ export class QitsSourceFiles {
         this.http
           .get<QitsSourceFileResponse>(this.links.apiUrl('qits-githost', url) ?? url, {
             params: { rev: sha, path },
-            withCredentials: true,
           })
           .subscribe({
             next: (body) => resolve(toSourceFile(body)),

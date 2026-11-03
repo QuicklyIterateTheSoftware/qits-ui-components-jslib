@@ -83,8 +83,8 @@ export const QITS_REPOSITORIES = new InjectionToken<QitsRepositoriesSource>('QIT
 
 /**
  * Where a project's repositories are asked for: under this path, on **qits-projects' own origin**
- * (`QitsAppLinks.apiOrigin('qits-projects')`), with the session carried by `withCredentials` — the
- * same arrangement as the project list. The project **id** goes in the path: ids are what the
+ * (`QitsAppLinks.apiOrigin('qits-projects')`), signed in with the bearer the app's
+ * `qitsBearerInterceptor` (`@qits/angular`) adds — the same arrangement as the project list. The project **id** goes in the path: ids are what the
  * service resolves, slugs are what URLs say.
  */
 export const QITS_REPOSITORIES_URL = '/projects/api/projects';
@@ -167,7 +167,7 @@ class HttpRepositoriesSource implements QitsRepositoriesSource {
       this.gaveUp.set(false);
       if (!projectId) return;
       const subscription = http
-        .get<QitsRepositoryEntries>(repositoriesUrl(root, projectId), { withCredentials: true })
+        .get<QitsRepositoryEntries>(repositoriesUrl(root, projectId))
         .subscribe({
           next: (body) => {
             this.answered.set(toRepositories(body));
@@ -215,7 +215,7 @@ export interface QitsProjectRepositories {
  *
  * <p>The same door and the same mapping as `QITS_REPOSITORIES`' own read: `GET
  * {@link QITS_REPOSITORIES_URL}/{projectId}/repositories` on qits-projects' origin, waiting for the
- * navigation to state it, with the session. One request per project for the life of the
+ * navigation to state it, with the bearer. One request per project for the life of the
  * application; a failed read is not kept, so the next ask tries again. Each read is a pending task,
  * so `whenStable()` waits for it.
  *
@@ -243,19 +243,17 @@ export class QitsProjectRepositoryLookup {
     untracked(() => {
       const done = this.pending.add();
       const ask = (root: string) =>
-        this.http
-          .get<QitsRepositoryEntries>(repositoriesUrl(root, projectId), { withCredentials: true })
-          .subscribe({
-            next: (body) => {
-              state.set({ repositories: toRepositories(body), failed: false });
-              done();
-            },
-            error: () => {
-              this.cache.delete(projectId);
-              state.set({ repositories: [], failed: true });
-              done();
-            },
-          });
+        this.http.get<QitsRepositoryEntries>(repositoriesUrl(root, projectId)).subscribe({
+          next: (body) => {
+            state.set({ repositories: toRepositories(body), failed: false });
+            done();
+          },
+          error: () => {
+            this.cache.delete(projectId);
+            state.set({ repositories: [], failed: true });
+            done();
+          },
+        });
       if (this.base !== undefined) {
         ask(this.base);
         return;

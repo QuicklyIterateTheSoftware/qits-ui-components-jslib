@@ -45,21 +45,21 @@ describe('provideQitsProjects across origins', () => {
     http().verify();
   });
 
-  it('asks qits-projects on its own origin, with the session, once it is known', () => {
+  it('asks qits-projects on its own origin, without the cookie, once it is known', () => {
     setup();
     projectId.set('p1');
     tree.set(toNavTree(ORIGINS));
     TestBed.tick();
 
     const list = http().expectOne(`https://projects.qits.example${QITS_PROJECTS_URL}`);
-    expect(list.request.withCredentials).toBe(true);
+    expect(list.request.withCredentials).toBe(false);
     list.flush({ entries: [{ project: { id: 'p1', slug: 'qits', name: 'qits' } }] });
     expect(TestBed.inject(QITS_PROJECTS).projects()).toHaveLength(1);
 
     const repositories = http().expectOne(
       `https://projects.qits.example${QITS_REPOSITORIES_URL}/p1/repositories`,
     );
-    expect(repositories.request.withCredentials).toBe(true);
+    expect(repositories.request.withCredentials).toBe(false);
   });
 
   it('keeps the same-origin path where the navigation names no origin for qits-projects', () => {
