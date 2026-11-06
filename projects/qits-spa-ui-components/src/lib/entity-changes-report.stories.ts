@@ -9,16 +9,13 @@ import {
   TRUNCATED,
   UNCHANGED,
 } from './fixtures/entity-changes/entity-changes-states';
-// Relative, not `@qits/ui-components/mermaid`: Storybook compiles library sources directly, never
-// against the built dist this package's own path mapping points at (ticket qits-1910). Without
-// this, the diagrams this report draws would all fall back to their definitions as text.
-import { provideQitsMermaid } from '../../mermaid/src/provide-qits-mermaid';
+import { MERMAID_STORY_LOADER } from './fixtures/mermaid-story-loader';
 
 const meta: Meta<QitsEntityChangesReport> = {
   title: 'Reports/Entity changes',
   component: QitsEntityChangesReport,
   tags: ['autodocs'],
-  decorators: [applicationConfig({ providers: [provideQitsMermaid()] })],
+  decorators: [applicationConfig({ providers: [MERMAID_STORY_LOADER] })],
   args: { ...CHANGED },
 };
 
