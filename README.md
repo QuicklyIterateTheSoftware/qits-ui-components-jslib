@@ -29,6 +29,8 @@ opened the panel over it.
 | `QitsStepProgress`   | `<qits-step-progress>`   | A pipeline's steps as a segmented track: one bubble per planned step, each filling against **its own** expected duration with its actual/expected beside it. Required `steps` (`{ expectedMillis, startedAt?, finishedAt? }[]`), `label`.     |
 | `QitsRunReports`     | `<qits-run-reports>`     | A CI run's release reports: every highlight in one strip, then one collapsible section per report drawn by the view its kind registered. Required `runId`; `reload()` when the run finishes. Reads qits-ci itself — see _Release reports_.    |
 | `QitsMermaidDiagram` | `<qits-mermaid-diagram>` | A Mermaid definition, drawn. mermaid loads lazily, only when one renders, in `securityLevel: 'strict'`; an undrawable definition stays legible as text.                                                                                       |
+| `QitsCommitMessage`  | `<qits-commit-message>`  | A commit message with the project's work ids (`qits-1897`) drawn as `<qits-work-ref>`. `message`, `project` (the slug); inline, plain text without a project. Asks qits-projects for briefs itself — see _Work references_.                   |
+| `QitsWorkRef`        | `<qits-work-ref>`        | A work item's qualified id; with a known brief a reference whose popover shows the id (linked), the status, the age and the title. `project`, required `qualifiedId`, optional `brief`.                                                       |
 
 ## Release reports
 
@@ -639,6 +641,65 @@ bolt and a sentence in a popover rather than anything the layout around it notic
 `provideQitsBuildList([…])` answers the same contract from a literal, with nothing fetched, nothing
 polled and no stream opened.
 
+## Work references
+
+```html
+<span class="message truncate"
+  ><qits-commit-message [message]="commit.subject" [project]="slug()"
+/></span>
+```
+
+Every commit view draws subjects that name work items — `feat(qits-1897): …` — and
+`<qits-commit-message>` turns each id of `project` in one into a `<qits-work-ref>`. An id is
+`<slug>-<digits>` for **that slug only** (escaped, case-sensitive) and a whole word: nothing of
+`[A-Za-z0-9_-]` before the slug, nothing of `[A-Za-z0-9_]` after the digits, so `fooqits-1`,
+`qits-1897x` and `qits-ci-service` stay text and `qits-1897-followup` names `qits-1897`.
+`qitsCommitMessageRuns(message, project)` is the tokeniser, as a pure function. Text is
+interpolated, never `innerHTML`, and the host is `display: inline` with no wrapper around a run, so
+it drops into an existing message span.
+
+**This is the fifth read, and the same rule as the other four**: the brief of an id in a commit
+subject is something no application rendering the commit has. `QitsWorkBriefs` (root) asks
+qits-projects for it — `GET /projects/api/projects/{project}/work/briefs?id=qits-1,qits-2`, the ids
+comma-separated in one `id`, on qits-projects' own origin through `QitsAppLinks.whenApiUrl` and the
+app's `HttpClient` — and:
+
+- coalesces every `request(project, qualifiedId)` of one tick (a microtask, so zoneless works) into
+  **one call per project**, split at `QITS_WORK_BRIEFS_MAX_IDS` (200);
+- keeps every answer for the life of the application, a missing or failed id included, and never
+  asks for one twice;
+- asks **nothing on the server**: every id renders as plain text there, which is also the browser's
+  first paint, so hydration agrees.
+
+`request` answers a signal of `QitsWorkBriefState`: the brief, `'pending'`, or `undefined` (none to
+show). `provideQitsWorkBriefs(source)` replaces the read — `(project, ids) => Promise<QitsWorkBrief[]>`
+behind `QITS_WORK_BRIEF_SOURCE` — for a story, a spec, or an app that has the briefs already.
+
+**Without a brief, a reference is the id as plain text and nothing else** — unknown, pending,
+failed, server-rendered: no underline, no panel. With one it is a dotted-underlined id whose popover
+(`role="tooltip"`, the id's `aria-describedby`) reads `qits-1897 · ready for dev · 3h ago` (the
+`<time>` carries the instant in `datetime` and `title`) over the title.
+
+- **Fine pointer**: hover or keyboard focus opens it, and the pointer can move onto the panel. A
+  click on the id is left to the row or link around it.
+- **Coarse pointer** (a `touch`/`pen` press, else `matchMedia('(pointer: coarse)')`): a tap opens it
+  and is consumed — `preventDefault()` and `stopPropagation()` — so the commit link around it is not
+  followed. A second tap, or a press anywhere outside, closes it; the link in the panel navigates.
+- Escape closes it until the pointer or the focus comes back.
+
+**The panel cannot be clipped by a truncating subject.** It is `position: fixed`, placed from the
+id's `getBoundingClientRect()` when it opens (below, flipped above where below does not fit, kept
+8px inside the window, following scroll and resize while open), and shown in the **top layer**
+(`popover="manual"`) where the browser has the Popover API. `fixed` alone escapes `overflow:
+hidden`; the top layer also escapes a transformed ancestor and every `z-index`. Anchor positioning
+would do the placement in CSS, but is not in every browser the platform serves yet.
+
+**The link** is `QITS_WORK_LINK`, `(project, qualifiedId) => { href } | { routerLink }`. The default
+is a full-document link to the item's page on the **landing app**, the apex host that serves
+`/projects/<slug>/work/detail/<qualifiedId>`: the navigation's `applications.qits-landing.origin`
+(`QitsAppLinks.origin('qits-landing')`), else the environment origin (the apex itself on the
+platform), else the bare path. The landing app provides a `routerLink` instead.
+
 ## Pacts of the library's calls: `@qits/ui-components/testing`
 
 Every read above is a REST call this library makes on behalf of whichever SPA embeds it — to
@@ -683,6 +744,10 @@ package of each provider it calls:
 `@qits/githost-golden-masters`. Each block is exported on its own too (`UI_COMPONENTS_BLOCKS`), and
 this repository's own spec runs every one of them against a mock server, so the rows stay checked
 here; it commits no pact of its own.
+
+`QitsWorkBriefs`' read (qits-projects-service `listProjectWorkBriefs`) has **no block yet**: the
+golden master it would be bound from is not in a published `@qits/projects-golden-masters`. It
+joins the table as `WORK_BRIEFS` once this repository's pin carries it.
 
 ## Install
 

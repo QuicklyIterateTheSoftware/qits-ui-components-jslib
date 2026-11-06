@@ -258,3 +258,26 @@ export {
   QitsCodePreviewInsight,
 } from './lib/failures/code-preview-insight';
 export { provideQitsStandardFailureInsights } from './lib/failures/standard-failure-insights';
+export {
+  provideQitsWorkBriefs,
+  QITS_WORK_BRIEF_SOURCE,
+  QITS_WORK_BRIEFS_MAX_IDS,
+  QITS_WORK_BRIEFS_PATH,
+  QitsWorkBriefs,
+} from './lib/work-briefs';
+export type {
+  QitsWorkBrief,
+  QitsWorkBriefSource,
+  QitsWorkBriefsResponse,
+  QitsWorkBriefState,
+} from './lib/work-briefs';
+export {
+  QITS_WORK_LINK,
+  QitsWorkRef,
+  qitsRelativeTime,
+  qitsWorkDetailPath,
+  qitsWorkStatusTone,
+} from './lib/work-ref';
+export type { QitsWorkLink, QitsWorkLinkFactory } from './lib/work-ref';
+export { QitsCommitMessage, qitsCommitMessageRuns } from './lib/commit-message';
+export type { QitsCommitMessageRun } from './lib/commit-message';
