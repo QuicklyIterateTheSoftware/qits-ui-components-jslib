@@ -73,9 +73,11 @@ for (const pkg of ['@pact-foundation/pact', '@qits/angular']) {
 }
 
 // The entry points a consumer imports, each with its types and its module. `./testing` is the
-// consumer's pact helper (ticket qits-1284); `./package.json` is how that helper, running in the
-// consumer, names the version of this package the consumer resolves.
-for (const subpath of ['.', './testing']) {
+// consumer's pact helper (ticket qits-1284); `./mermaid` is the real `import('mermaid')` loader
+// (ticket qits-1910), kept out of the main entry so a consumer that never draws a diagram never
+// bundles it; `./package.json` is how that helper, running in the consumer, names the version of
+// this package the consumer resolves.
+for (const subpath of ['.', './testing', './mermaid']) {
   for (const condition of ['types', 'default']) {
     if (typeof dist.exports?.[subpath]?.[condition] !== 'string') {
       fail(`exports["${subpath}"].${condition} is missing: the entry point did not build`);
@@ -92,9 +94,8 @@ if (!dist.exports?.['./package.json']) {
 // qits-543): every consuming app depends on @qits/angular directly, so it stays undeclared above.
 const main = dist.exports?.['.']?.default;
 if (typeof main === 'string' && existsSync(resolve(DIST, main))) {
-  const imports = [...readFileSync(resolve(DIST, main), 'utf8').matchAll(/from '([^']+)'/g)].map(
-    (match) => match[1],
-  );
+  const mainSource = readFileSync(resolve(DIST, main), 'utf8');
+  const imports = [...mainSource.matchAll(/from '([^']+)'/g)].map((match) => match[1]);
   for (const forbidden of imports.filter((name) =>
     /^(node:|@pact-foundation\/|@qits\/angular\/testing|@qits\/ui-components\/testing|@angular\/core\/testing)/.test(
       name,
@@ -102,9 +103,18 @@ if (typeof main === 'string' && existsSync(resolve(DIST, main))) {
   )) {
     fail(`${main} imports ${forbidden}: only the ./testing entry point may`);
   }
+
+  // esbuild emits a dynamic import's whole chunk for every module it reaches, even one
+  // tree-shaken out of the running app (ticket qits-1910): a bare `import('mermaid')` in the main
+  // FESM put mermaid's ~3.4 MB chunk in every consumer, whether or not it ever drew a diagram. The
+  // loader that actually imports mermaid belongs only behind the ./mermaid entry point.
+  if (/import\(\s*['"]mermaid['"]\s*\)|from\s+['"]mermaid['"]/.test(mainSource)) {
+    fail(`${main} imports mermaid: move that loader behind the ./mermaid entry point`);
+  }
 }
 
 if (failed) process.exit(1);
 console.log(
-  `publishable: ${dist.name}@${dist.version} in ${DIST} (exports resolve, ./testing built, not private)`,
+  `publishable: ${dist.name}@${dist.version} in ${DIST} ` +
+    '(exports resolve, ./testing and ./mermaid built, not private, no mermaid in the main FESM)',
 );

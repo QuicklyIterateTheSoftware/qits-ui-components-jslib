@@ -84,6 +84,22 @@ describe('QitsMermaidDiagram', () => {
     expect(element(fixture).querySelector<HTMLElement>('.diagram')?.hidden).toBe(true);
   });
 
+  it('falls back to the definition as text with no loader provided (the default factory)', async () => {
+    // No QITS_MERMAID_LOADER override here: this exercises the token's own default factory, which
+    // (ticket qits-1910) rejects rather than importing mermaid — the import lives only behind
+    // `provideQitsMermaid()` in the ./mermaid entry point.
+    TestBed.configureTestingModule({});
+    const fixture = TestBed.createComponent(QitsMermaidDiagram);
+    fixture.componentRef.setInput('definition', DEFINITION);
+    fixture.detectChanges();
+    await settle(fixture);
+    expect(element(fixture).querySelector('pre.definition')?.textContent).toBe(DEFINITION);
+    expect(element(fixture).querySelector<HTMLElement>('.diagram')?.hidden).toBe(true);
+
+    const load = TestBed.inject(QITS_MERMAID_LOADER);
+    await expect(load()).rejects.toThrow(/provideQitsMermaid/);
+  });
+
   it('falls back to text when mermaid cannot be loaded at all', async () => {
     TestBed.configureTestingModule({
       providers: [

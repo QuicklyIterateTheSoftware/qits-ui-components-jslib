@@ -1,3 +1,4 @@
+import { applicationConfig } from '@storybook/angular-vite';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 import { QitsEntityChangesReport } from './entity-changes-report';
@@ -8,11 +9,16 @@ import {
   TRUNCATED,
   UNCHANGED,
 } from './fixtures/entity-changes/entity-changes-states';
+// Relative, not `@qits/ui-components/mermaid`: Storybook compiles library sources directly, never
+// against the built dist this package's own path mapping points at (ticket qits-1910). Without
+// this, the diagrams this report draws would all fall back to their definitions as text.
+import { provideQitsMermaid } from '../../mermaid/src/provide-qits-mermaid';
 
 const meta: Meta<QitsEntityChangesReport> = {
   title: 'Reports/Entity changes',
   component: QitsEntityChangesReport,
   tags: ['autodocs'],
+  decorators: [applicationConfig({ providers: [provideQitsMermaid()] })],
   args: { ...CHANGED },
 };
 

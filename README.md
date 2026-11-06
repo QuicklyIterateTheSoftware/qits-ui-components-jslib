@@ -16,21 +16,21 @@ A fourth read hangs off the same rule and is opt-in: the pending-builds bolt ask
 building, and keeps that count current off the platform's event stream whether or not anybody has
 opened the panel over it.
 
-| Component            | Selector                 | What it is                                                                                                                                                                                                                                    |
-| -------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `QitsButton`         | `<qits-button>`          | The button. `variant` (`primary`/`secondary`/`ghost`), `size` (`sm`/`md`/`lg`), `type`, `disabled`, `busy`; emits `pressed`.                                                                                                                  |
-| `QitsBadge`          | `<qits-badge>`           | A short status word. Required `label`, semantic `tone` (`neutral`/`info`/`success`/`warning`/`danger`/`highlight`).                                                                                                                           |
-| `QitsCard`           | `<qits-card>`            | A titled surface. `heading`, `subheading`, `elevated`; projects into the body, and `[qitsCardActions]` into the header.                                                                                                                       |
-| `QitsPicker`         | `<qits-picker>`          | Pick one of a list. Required `options` (`{ value: T, label: string }[]`), two-way `value` of `T \| undefined`; `compareWith`, `placeholder`, `disabled`.                                                                                      |
-| `QitsMainLayout`     | `<qits-main-layout>`     | The application skeleton: the project picker, the pending-builds bolt beside it, the nested sidebar, and the `<router-outlet />` the app's child routes render into. `brand` is the top-left fallback; `links` an override in the flat shape. |
-| `QitsNavSubmenu`     | `[qitsNavSubmenu]`       | Marks an `<ng-template>` as the sub-menu under the current navigation row. The layout gives it a box; the app styles what goes in it.                                                                                                         |
-| `QitsDiffViewer`     | `<qits-diff-viewer>`     | A file's unified diff, coloured by line. `patch` is git's own text and `path` the file it is of; it renders, it never fetches.                                                                                                                |
-| `QitsChangeTree`     | `<qits-change-tree>`     | The files a change set touches, as a tree. `entries` (`{ path, previousPath, changeType }[]`), two-way `selected`, `label`. Single-child directory chains fold into one row.                                                                  |
-| `QitsStepProgress`   | `<qits-step-progress>`   | A pipeline's steps as a segmented track: one bubble per planned step, each filling against **its own** expected duration with its actual/expected beside it. Required `steps` (`{ expectedMillis, startedAt?, finishedAt? }[]`), `label`.     |
-| `QitsRunReports`     | `<qits-run-reports>`     | A CI run's release reports: every highlight in one strip, then one collapsible section per report drawn by the view its kind registered. Required `runId`; `reload()` when the run finishes. Reads qits-ci itself — see _Release reports_.    |
-| `QitsMermaidDiagram` | `<qits-mermaid-diagram>` | A Mermaid definition, drawn. mermaid loads lazily, only when one renders, in `securityLevel: 'strict'`; an undrawable definition stays legible as text.                                                                                       |
-| `QitsCommitMessage`  | `<qits-commit-message>`  | A commit message with the project's work ids (`qits-1897`) drawn as `<qits-work-ref>`. `message`, `project` (the slug); inline, plain text without a project. Asks qits-projects for briefs itself — see _Work references_.                   |
-| `QitsWorkRef`        | `<qits-work-ref>`        | A work item's qualified id; with a known brief a reference whose popover shows the id (linked), the status, the age and the title. `project`, required `qualifiedId`, optional `brief`.                                                       |
+| Component            | Selector                 | What it is                                                                                                                                                                                                                                                                                |
+| -------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `QitsButton`         | `<qits-button>`          | The button. `variant` (`primary`/`secondary`/`ghost`), `size` (`sm`/`md`/`lg`), `type`, `disabled`, `busy`; emits `pressed`.                                                                                                                                                              |
+| `QitsBadge`          | `<qits-badge>`           | A short status word. Required `label`, semantic `tone` (`neutral`/`info`/`success`/`warning`/`danger`/`highlight`).                                                                                                                                                                       |
+| `QitsCard`           | `<qits-card>`            | A titled surface. `heading`, `subheading`, `elevated`; projects into the body, and `[qitsCardActions]` into the header.                                                                                                                                                                   |
+| `QitsPicker`         | `<qits-picker>`          | Pick one of a list. Required `options` (`{ value: T, label: string }[]`), two-way `value` of `T \| undefined`; `compareWith`, `placeholder`, `disabled`.                                                                                                                                  |
+| `QitsMainLayout`     | `<qits-main-layout>`     | The application skeleton: the project picker, the pending-builds bolt beside it, the nested sidebar, and the `<router-outlet />` the app's child routes render into. `brand` is the top-left fallback; `links` an override in the flat shape.                                             |
+| `QitsNavSubmenu`     | `[qitsNavSubmenu]`       | Marks an `<ng-template>` as the sub-menu under the current navigation row. The layout gives it a box; the app styles what goes in it.                                                                                                                                                     |
+| `QitsDiffViewer`     | `<qits-diff-viewer>`     | A file's unified diff, coloured by line. `patch` is git's own text and `path` the file it is of; it renders, it never fetches.                                                                                                                                                            |
+| `QitsChangeTree`     | `<qits-change-tree>`     | The files a change set touches, as a tree. `entries` (`{ path, previousPath, changeType }[]`), two-way `selected`, `label`. Single-child directory chains fold into one row.                                                                                                              |
+| `QitsStepProgress`   | `<qits-step-progress>`   | A pipeline's steps as a segmented track: one bubble per planned step, each filling against **its own** expected duration with its actual/expected beside it. Required `steps` (`{ expectedMillis, startedAt?, finishedAt? }[]`), `label`.                                                 |
+| `QitsRunReports`     | `<qits-run-reports>`     | A CI run's release reports: every highlight in one strip, then one collapsible section per report drawn by the view its kind registered. Required `runId`; `reload()` when the run finishes. Reads qits-ci itself — see _Release reports_.                                                |
+| `QitsMermaidDiagram` | `<qits-mermaid-diagram>` | A Mermaid definition, drawn — if the app added `provideQitsMermaid()` from `@qits/ui-components/mermaid` to its providers. In `securityLevel: 'strict'`, loaded lazily, only when one renders; without that provider, or on any other load failure, the definition stays legible as text. |
+| `QitsCommitMessage`  | `<qits-commit-message>`  | A commit message with the project's work ids (`qits-1897`) drawn as `<qits-work-ref>`. `message`, `project` (the slug); inline, plain text without a project. Asks qits-projects for briefs itself — see _Work references_.                                                               |
+| `QitsWorkRef`        | `<qits-work-ref>`        | A work item's qualified id; with a known brief a reference whose popover shows the id (linked), the status, the age and the title. `project`, required `qualifiedId`, optional `brief`.                                                                                                   |
 
 ## Release reports
 
@@ -77,8 +77,10 @@ The entity-changes view (qits-760) draws the CLI's semantic diff of `docs/databa
 arrives — per unit a status chip, the tables, columns and relations added, removed and changed,
 and the diagrams through `QitsMermaidDiagram`: a Before / After switch for a CHANGED unit, After
 only for ADDED and CURRENT (no baseline: the first diagram), Before only for REMOVED, and an
-UNCHANGED unit collapsed. `mermaid` is a dependency of this package, so a consumer adds nothing,
-and its chunk loads only on a page that draws a diagram.
+UNCHANGED unit collapsed. A consumer that wants those diagrams drawn adds `provideQitsMermaid()`
+from `@qits/ui-components/mermaid` to its app config — see _The mermaid loader:
+`@qits/ui-components/mermaid`_; without it, and on any other load failure, a diagram shows its
+definition as text instead.
 
 The screenshots view (qits-762) is where a reviewer accepts a visual change: the committed
 screenshot baselines the fold adds, changes and removes against the baseline tag, grouped by spec,
@@ -700,6 +702,26 @@ is a full-document link to the item's page on the **landing app**, the apex host
 (`QitsAppLinks.origin('qits-landing')`), else the environment origin (the apex itself on the
 platform), else the bare path. The landing app provides a `routerLink` instead.
 
+## The mermaid loader: `@qits/ui-components/mermaid`
+
+`QITS_MERMAID_LOADER` (used by `QitsMermaidDiagram`, and so by `QitsEntityChangesReport`'s
+diagrams) names a lazy loader for mermaid, but the main entry point never imports mermaid itself
+(ticket qits-1910): esbuild emits a dynamic import's whole chunk — mermaid is roughly 3.4 MB — for
+every module it reaches, even one tree-shaken out of the running app, so a bare `import('mermaid')`
+there put that chunk in every consumer, whether or not it ever drew a diagram. The real loader is
+this secondary entry point's one export:
+
+```ts
+import { provideQitsMermaid } from '@qits/ui-components/mermaid';
+
+providers: [provideQitsMermaid()];
+```
+
+Add it once, in the app's providers, and diagrams draw as before. Skip it and a diagram still
+renders — its definition, legible as text in a `<pre>` — the same fallback as any other mermaid
+load failure. A spec or story that needs a real drawn diagram provides it the same way; one that
+does not can leave `QITS_MERMAID_LOADER` alone or replace it with a stub.
+
 ## Pacts of the library's calls: `@qits/ui-components/testing`
 
 Every read above is a REST call this library makes on behalf of whichever SPA embeds it — to
@@ -727,16 +749,16 @@ that label rewrites the file instead of failing. The guard fails the spec when a
 calling symbol (`provideQits*`, `QitsReportsClient`, `<qits-run-reports`, …) whose calls the pacts
 do not hold — a provider moved into a route, out of `appConfig`'s sight, cannot ship unpacted.
 
-| Feature        | Turned on by                                                          | Provider / operations                                                      | `qits-trigger.interaction`            |
-| -------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------- |
-| `NAVIGATION`   | `QITS_NAVIGATION` (`provideQitsNavigation`)                           | qits-edge-service `getMainNavigation`                                      | `show-main-navigation`                |
-| `PROJECTS`     | `QITS_PROJECTS` (`provideQitsProjects`)                               | qits-projects-service `listProjects`                                       | `show-project-picker`                 |
-| `REPOSITORIES` | `QITS_PROJECTS`/`QITS_REPOSITORIES`, `QitsProjectRepositoryLookup`    | qits-projects-service `listProjectRepositories`                            | `show-project-repositories`           |
-| `ACTIVE_RUNS`  | `QITS_BUILDS` (`provideQitsBuilds`)                                   | qits-ci-service `listActiveRuns`                                           | `show-active-builds`                  |
-| `RUN_REPORTS`  | `<qits-run-reports`, `QitsRunReports`, `QitsReportsClient` in sources | qits-ci-service `listRunReports`, `getRunReport`, `listRunBaselineReports` | `show-run-reports`, `open-run-report` |
-| `SOURCE_FILE`  | the code-preview failure insight (`provideQitsStandardReportKinds`)   | qits-githost-service `getRepositoryFile` (the file and its three 404s)     | `preview-failure-source`              |
-| `RAW_FILE`     | the screenshots report kind (`provideQitsStandardReportKinds`)        | qits-githost-service `getRaw` (`image/png` bytes)                          | `show-screenshot`                     |
-| `WORK_BRIEFS`  | `QitsWorkBriefs`, `QitsWorkRef`, `QitsCommitMessage`, `<qits-work-ref`, `<qits-commit-message` in sources | qits-projects-service `listProjectWorkBriefs`              | `show-work-brief`                     |
+| Feature        | Turned on by                                                                                              | Provider / operations                                                      | `qits-trigger.interaction`            |
+| -------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------- |
+| `NAVIGATION`   | `QITS_NAVIGATION` (`provideQitsNavigation`)                                                               | qits-edge-service `getMainNavigation`                                      | `show-main-navigation`                |
+| `PROJECTS`     | `QITS_PROJECTS` (`provideQitsProjects`)                                                                   | qits-projects-service `listProjects`                                       | `show-project-picker`                 |
+| `REPOSITORIES` | `QITS_PROJECTS`/`QITS_REPOSITORIES`, `QitsProjectRepositoryLookup`                                        | qits-projects-service `listProjectRepositories`                            | `show-project-repositories`           |
+| `ACTIVE_RUNS`  | `QITS_BUILDS` (`provideQitsBuilds`)                                                                       | qits-ci-service `listActiveRuns`                                           | `show-active-builds`                  |
+| `RUN_REPORTS`  | `<qits-run-reports`, `QitsRunReports`, `QitsReportsClient` in sources                                     | qits-ci-service `listRunReports`, `getRunReport`, `listRunBaselineReports` | `show-run-reports`, `open-run-report` |
+| `SOURCE_FILE`  | the code-preview failure insight (`provideQitsStandardReportKinds`)                                       | qits-githost-service `getRepositoryFile` (the file and its three 404s)     | `preview-failure-source`              |
+| `RAW_FILE`     | the screenshots report kind (`provideQitsStandardReportKinds`)                                            | qits-githost-service `getRaw` (`image/png` bytes)                          | `show-screenshot`                     |
+| `WORK_BRIEFS`  | `QitsWorkBriefs`, `QitsWorkRef`, `QitsCommitMessage`, `<qits-work-ref`, `<qits-commit-message` in sources | qits-projects-service `listProjectWorkBriefs`                              | `show-work-brief`                     |
 
 A consumer adds, as devDependencies, `@pact-foundation/pact` (17.1.4) and `@qits/angular` — which
 this package deliberately does not declare, not even as optional peers — and the golden-master
@@ -838,11 +860,13 @@ export class RunSummary {
 `pnpm build` runs `scripts/check-exports.mjs` over the output: it is the manifest ng-packagr
 _writes_ that gets published, so the check reads that one — the package name, the version against
 `projects/qits-spa-ui-components/package.json`, the absence of a `private` flag, the peer ranges,
-that every path in `exports` exists on disk, and that the `./testing` entry point built, the
-manifest names neither pact nor `@qits/angular` and the main bundle imports nothing of the testing
-side (pact, `@qits/angular/testing`, `./testing`). The main bundle does import `@qits/angular`
-itself, for its `QITS_EVENT_SOURCE` (epic qits-543), still undeclared. A publish that would have failed after a green
-pipeline fails at build time instead.
+that every path in `exports` exists on disk, and that both the `./testing` and `./mermaid` entry
+points built, the manifest names neither pact nor `@qits/angular` and the main bundle imports
+nothing of the testing side (pact, `@qits/angular/testing`, `./testing`). The main bundle does
+import `@qits/angular` itself, for its `QITS_EVENT_SOURCE` (epic qits-543), still undeclared. It
+also has to import no `mermaid` at all (ticket qits-1910): that loader lives only behind
+`./mermaid`, so the check greps the built main FESM for `import('mermaid')` and fails the build if
+it finds one. A publish that would have failed after a green pipeline fails at build time instead.
 
 The workspace root is a harness: its `package.json` is `private: true` and carries only tooling.
 The publishable unit is `dist/qits-spa-ui-components`, and

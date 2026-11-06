@@ -30,15 +30,27 @@ export interface QitsMermaid {
 }
 
 /**
- * How `QitsMermaidDiagram` gets mermaid: a lazy `import('mermaid')`, called the first time a
- * diagram actually renders and never before, so the chunk loads only on a page that draws one.
- * A spec or story replaces it with `{ provide: QITS_MERMAID_LOADER, useValue: () => stub }`.
+ * How `QitsMermaidDiagram` gets mermaid. This entry point names the token but never loads mermaid
+ * itself (ticket qits-1910): esbuild emits a dynamic import's whole chunk — mermaid is roughly
+ * 3.4 MB — for every module it reaches, even one tree-shaken out of the running app, so a bare
+ * dynamic import of mermaid here put that chunk in **every** consumer, whether or not it ever
+ * drew a diagram. The real loader lives behind `@qits/ui-components/mermaid`'s
+ * `provideQitsMermaid()`, which a consuming app adds to its providers only if it wants diagrams
+ * drawn; without it this default factory's loader rejects, and a diagram falls back to its
+ * definition as text, same as any other load failure. A spec or story replaces the token outright
+ * with `{ provide: QITS_MERMAID_LOADER, useValue: () => stub }`.
  */
 export const QITS_MERMAID_LOADER = new InjectionToken<() => Promise<QitsMermaid>>(
   'QITS_MERMAID_LOADER',
   {
     providedIn: 'root',
-    factory: () => async () => (await import('mermaid')).default as unknown as QitsMermaid,
+    factory: () => () =>
+      Promise.reject(
+        new Error(
+          'QITS_MERMAID_LOADER has no mermaid loader: add provideQitsMermaid() from ' +
+            "'@qits/ui-components/mermaid' to this app's providers to draw diagrams",
+        ),
+      ),
   },
 );
 
@@ -52,10 +64,12 @@ const DARK = '(prefers-color-scheme: dark)';
  * One Mermaid diagram, drawn from its definition — qits-docs-frontend's `renderMermaidBlocks`,
  * lifted into the library.
  *
- * - mermaid is imported lazily ({@link QITS_MERMAID_LOADER}), only once this component renders,
- *   and initialised with `securityLevel: 'strict'`: labels are text, never markup, and the SVG
- *   it returns has been through mermaid's own DOMPurify pass — which is why it may be put in place
- *   as it is.
+ * - mermaid is loaded lazily through {@link QITS_MERMAID_LOADER}, only once this component
+ *   renders, and initialised with `securityLevel: 'strict'`: labels are text, never markup, and
+ *   the SVG it returns has been through mermaid's own DOMPurify pass — which is why it may be put
+ *   in place as it is. The loader that actually imports mermaid is installed by
+ *   `provideQitsMermaid()` from `@qits/ui-components/mermaid`; without it the definition stays in
+ *   its `<pre>`, same as any other load failure.
  * - A definition mermaid cannot draw, or mermaid failing to load, leaves the definition in a
  *   `<pre>`, legible as text. It never throws.
  * - It redraws when `definition` changes, and when the host's `prefers-color-scheme` does:
