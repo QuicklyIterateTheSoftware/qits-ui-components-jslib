@@ -35,6 +35,11 @@ export const UI_COMPONENTS_CALLING_SYMBOLS: Readonly<
   QitsScreenshotsReport: ['RAW_FILE'],
   '<qits-screenshots-report': ['RAW_FILE'],
   QitsRepositoryRawClient: ['RAW_FILE'],
+  QitsWorkBriefs: ['WORK_BRIEFS'],
+  QitsWorkRef: ['WORK_BRIEFS'],
+  QitsCommitMessage: ['WORK_BRIEFS'],
+  '<qits-work-ref': ['WORK_BRIEFS'],
+  '<qits-commit-message': ['WORK_BRIEFS'],
 };
 
 /** One calling symbol, where a source uses it. */

@@ -736,6 +736,7 @@ do not hold — a provider moved into a route, out of `appConfig`'s sight, canno
 | `RUN_REPORTS`  | `<qits-run-reports`, `QitsRunReports`, `QitsReportsClient` in sources | qits-ci-service `listRunReports`, `getRunReport`, `listRunBaselineReports` | `show-run-reports`, `open-run-report` |
 | `SOURCE_FILE`  | the code-preview failure insight (`provideQitsStandardReportKinds`)   | qits-githost-service `getRepositoryFile` (the file and its three 404s)     | `preview-failure-source`              |
 | `RAW_FILE`     | the screenshots report kind (`provideQitsStandardReportKinds`)        | qits-githost-service `getRaw` (`image/png` bytes)                          | `show-screenshot`                     |
+| `WORK_BRIEFS`  | `QitsWorkBriefs`, `QitsWorkRef`, `QitsCommitMessage`, `<qits-work-ref`, `<qits-commit-message` in sources | qits-projects-service `listProjectWorkBriefs`              | `show-work-brief`                     |
 
 A consumer adds, as devDependencies, `@pact-foundation/pact` (17.1.4) and `@qits/angular` — which
 this package deliberately does not declare, not even as optional peers — and the golden-master
@@ -744,10 +745,6 @@ package of each provider it calls:
 `@qits/githost-golden-masters`. Each block is exported on its own too (`UI_COMPONENTS_BLOCKS`), and
 this repository's own spec runs every one of them against a mock server, so the rows stay checked
 here; it commits no pact of its own.
-
-`QitsWorkBriefs`' read (qits-projects-service `listProjectWorkBriefs`) has **no block yet**: the
-golden master it would be bound from is not in a published `@qits/projects-golden-masters`. It
-joins the table as `WORK_BRIEFS` once this repository's pin carries it.
 
 ## Install
 

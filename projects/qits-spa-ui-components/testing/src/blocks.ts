@@ -33,7 +33,9 @@ import {
   QitsReportsClient,
   QitsRepositoryRawClient,
   QitsSourceFiles,
+  QitsWorkBriefs,
   type QitsScopeSource,
+  type QitsWorkBrief,
 } from '@qits/ui-components';
 
 import { payloadPresentOnly, providerMasters, type UiComponentsProvider } from './masters';
@@ -49,7 +51,8 @@ export type UiComponentsFeature =
   | 'ACTIVE_RUNS'
   | 'RUN_REPORTS'
   | 'SOURCE_FILE'
-  | 'RAW_FILE';
+  | 'RAW_FILE'
+  | 'WORK_BRIEFS';
 
 /** Who is pacting, through which library version, with which providers. */
 export interface UiComponentsPactContext {
@@ -103,6 +106,7 @@ export const UI_COMPONENTS_TRIGGERS = {
   RUN_REPORT: 'open-run-report',
   SOURCE_FILE: 'preview-failure-source',
   RAW_FILE: 'show-screenshot',
+  WORK_BRIEFS: 'show-work-brief',
 } as const;
 
 /** `/main-navigation`, as `toNavTree` and `QitsAppLinks` read it. */
@@ -190,6 +194,15 @@ const SOURCE_FILE_CONSUMES = ['path', 'binary', 'size', 'content'];
 
 const RAW_FILE_STATE = 'a repository with an image on main';
 const RAW_FILE_TYPE = 'image/png';
+
+const WORK_BRIEFS_STATE = 'a project with work to brief';
+/** What `QitsWorkRef` reads of a brief; `id` and `archetype` are carried but never drawn. */
+const WORK_BRIEFS_CONSUMES = [
+  'briefs[].qualifiedId',
+  'briefs[].status',
+  'briefs[].title',
+  'briefs[].updatedAt',
+];
 
 /** The navigation an application's origin is read from: the mock server, for `app`. */
 function originAt(app: string, url: string): EnvironmentProviders {
@@ -544,6 +557,54 @@ export const UI_COMPONENTS_RAW_FILE: UiComponentsBlock = {
   },
 };
 
+/**
+ * `GET /projects/api/projects/{projectId}/work/briefs`, by `QitsWorkBriefs`: the state's three ids
+ * requested in one tick, so one call — the unknown one answered by its absence. The golden master
+ * records the `id` query with the ticket first, then the epic, then the unknown id, so the ids are
+ * requested in that same order (`QitsWorkBriefs` sends them as registered).
+ *
+ * The response's two briefs share one shape (the four consumed fields, both strings), which
+ * `addGoldenInteraction`'s array matcher folds to repeats of the first recorded element — the
+ * ticket's — rather than keeping each element's own value (`matchedArray` in
+ * `@qits/angular/testing`). So only the ticket is checked by value here; the epic is still
+ * requested, to keep the recorded three-id query exact, and checked only for having settled.
+ */
+export const UI_COMPONENTS_WORK_BRIEFS: UiComponentsBlock = {
+  feature: 'WORK_BRIEFS',
+  provider: 'qits-projects-service',
+  operations: ['listProjectWorkBriefs'],
+  pact: (pact, context) => {
+    const masters = providerMasters('qits-projects-service', context.from);
+    const { projectId, epicQualifiedId, ticketQualifiedId, unknownQualifiedId } = masters.operation(
+      WORK_BRIEFS_STATE,
+      'listProjectWorkBriefs',
+    ).params;
+    return addGoldenInteraction(pact, masters, {
+      provider: 'qits-projects-service',
+      state: WORK_BRIEFS_STATE,
+      operationId: 'listProjectWorkBriefs',
+      trigger: trigger(context, UI_COMPONENTS_TRIGGERS.WORK_BRIEFS),
+      consumes: WORK_BRIEFS_CONSUMES,
+      via: context.via,
+    }).executeTest((server) =>
+      inBed(context, [originAt('qits-projects', server.url)], async () => {
+        const briefs = TestBed.inject(QitsWorkBriefs);
+        // Same order as the golden master's `id` query: ticket, then epic, then unknown.
+        const ticket = briefs.request(projectId, ticketQualifiedId);
+        const epic = briefs.request(projectId, epicQualifiedId);
+        const unknown = briefs.request(projectId, unknownQualifiedId);
+        const settledState = (s: () => unknown) => (s() === 'pending' ? undefined : s() ?? null);
+        await settled(() => settledState(unknown), 'the unknown id');
+        const ticketBrief = typeof ticket() === 'object' ? (ticket() as QitsWorkBrief) : undefined;
+        check(ticketBrief, 'the ticket has no brief');
+        check(ticketBrief?.qualifiedId === ticketQualifiedId, 'the ticket brief is for another id');
+        check(settledState(epic) !== undefined, 'the epic id never settled');
+        check(unknown() === undefined, 'the unknown id came back with a brief');
+      }),
+    );
+  },
+};
+
 /** Every block, by feature, in the order a consumer's pacts are made. */
 export const UI_COMPONENTS_BLOCKS: Readonly<Record<UiComponentsFeature, UiComponentsBlock>> = {
   NAVIGATION: UI_COMPONENTS_NAVIGATION,
@@ -553,4 +614,5 @@ export const UI_COMPONENTS_BLOCKS: Readonly<Record<UiComponentsFeature, UiCompon
   RUN_REPORTS: UI_COMPONENTS_RUN_REPORTS,
   SOURCE_FILE: UI_COMPONENTS_SOURCE_FILE,
   RAW_FILE: UI_COMPONENTS_RAW_FILE,
+  WORK_BRIEFS: UI_COMPONENTS_WORK_BRIEFS,
 };

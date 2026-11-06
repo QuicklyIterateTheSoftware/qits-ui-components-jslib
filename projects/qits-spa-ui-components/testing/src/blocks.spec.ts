@@ -71,6 +71,7 @@ describe('@qits/ui-components/testing blocks', () => {
     expect(descriptions('qits-projects-service')).toEqual([
       'show-project-picker: listProjects',
       'show-project-repositories: listProjectRepositories',
+      'show-work-brief: listProjectWorkBriefs',
     ]);
     expect(descriptions('qits-ci-service')).toEqual([
       'open-run-report: getRunReport',
@@ -97,6 +98,7 @@ describe('@qits/ui-components/testing blocks', () => {
       'RUN_REPORTS',
       'SOURCE_FILE',
       'RAW_FILE',
+      'WORK_BRIEFS',
     ];
     expect(Object.keys(UI_COMPONENTS_BLOCKS)).toEqual(features);
   });
