@@ -37,6 +37,10 @@ interface Written {
   interactions: {
     description: string;
     comments: { references: Record<string, Record<string, string>> };
+    request: {
+      query?: Record<string, string[]>;
+      generators?: { query?: Record<string, { type: string; expression: string }> };
+    };
   }[];
 }
 const written = (provider: UiComponentsProvider): Written =>
@@ -87,6 +91,31 @@ describe('@qits/ui-components/testing blocks', () => {
       'preview-failure-source: getRepositoryFile',
       'show-screenshot: getRaw',
     ]);
+  });
+
+  it('sends a projects-service query template as a ProviderState generator', () => {
+    // qits-1897: the state creates random slugs, so the provider must send the ids it returned.
+    const [briefs] = written('qits-projects-service').interactions.filter(
+      (i) => i.description === 'show-work-brief: listProjectWorkBriefs',
+    );
+    expect(briefs.request.query).toEqual({
+      id: ['contract-00000001-2,contract-00000001-1,contract-00000001-999'],
+    });
+    expect(briefs.request.generators?.query).toEqual({
+      id: {
+        type: 'ProviderState',
+        expression: '${ticketQualifiedId},${epicQualifiedId},${unknownQualifiedId}',
+      },
+    });
+  });
+
+  it('keeps githost query templates filled with the state params, without generators', () => {
+    for (const interaction of written('qits-githost-service').interactions) {
+      expect(interaction.request.generators?.query).toBeUndefined();
+      for (const values of Object.values(interaction.request.query ?? {})) {
+        for (const value of values) expect(value).not.toMatch(/[{}]/);
+      }
+    }
   });
 
   it('covers every feature', () => {
