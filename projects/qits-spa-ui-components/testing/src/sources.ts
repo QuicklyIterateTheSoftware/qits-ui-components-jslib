@@ -40,6 +40,9 @@ export const UI_COMPONENTS_CALLING_SYMBOLS: Readonly<
   QitsCommitMessage: ['WORK_BRIEFS'],
   '<qits-work-ref': ['WORK_BRIEFS'],
   '<qits-commit-message': ['WORK_BRIEFS'],
+  QitsWorkRefs: ['WORK_BRIEFS'],
+  qitsWorkRefs: ['WORK_BRIEFS'],
+  qitsLinkWorkIds: ['WORK_BRIEFS'],
 };
 
 /** One calling symbol, where a source uses it. */

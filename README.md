@@ -31,6 +31,7 @@ opened the panel over it.
 | `QitsMermaidDiagram` | `<qits-mermaid-diagram>` | A Mermaid definition, drawn — if the app added `provideQitsMermaid()` from `@qits/ui-components/mermaid` to its providers. In `securityLevel: 'strict'`, loaded lazily, only when one renders; without that provider, or on any other load failure, the definition stays legible as text. |
 | `QitsCommitMessage`  | `<qits-commit-message>`  | A commit message with the project's work ids (`qits-1897`) drawn as `<qits-work-ref>`. `message`, `project` (the slug); inline, plain text without a project. Asks qits-projects for briefs itself — see _Work references_.                                                               |
 | `QitsWorkRef`        | `<qits-work-ref>`        | A work item's qualified id; with a known brief a reference whose popover shows the id (linked), the status, the age and the title. `project`, required `qualifiedId`, optional `brief`.                                                                                                   |
+| `QitsWorkRefs`       | `[qitsWorkRefs]`         | The work ids in HTML rendered into the element (`[innerHTML]` markdown) drawn as `<qits-work-ref>`. `qitsWorkRefs` (the slug), `qitsWorkRefsHtml` (bind the same HTML, to re-link). `qitsLinkWorkIds` is the function under it.                                                           |
 
 ## Release reports
 
@@ -659,6 +660,23 @@ Every commit view draws subjects that name work items — `feat(qits-1897): …`
 `qitsCommitMessageRuns(message, project)` is the tokeniser, as a pure function. Text is
 interpolated, never `innerHTML`, and the host is `display: inline` with no wrapper around a run, so
 it drops into an existing message span.
+
+**HTML already rendered** — markdown bound to `[innerHTML]` — gets the same references from the
+`[qitsWorkRefs]` directive:
+
+```html
+<div [innerHTML]="html()" [qitsWorkRefs]="slug()" [qitsWorkRefsHtml]="html()"></div>
+```
+
+After each render it walks the element's text nodes and splits every one naming an id (the same
+tokeniser) into text nodes and `<qits-work-ref>` hosts — DOM, never markup. Text in `<code>` and
+`<pre>` is linked and keeps the code font; text in an `<a>` is not, so a markdown link stays that
+link, and a reference already drawn is never drawn twice. Every id of one render is registered in
+the same tick, so a page of rendered comments asks once per project. `qitsWorkRefsHtml` takes the
+same value as `[innerHTML]`: a new subtree is linked afresh, the old references destroyed first.
+Without a project, and on the server, the HTML is left byte for byte as rendered.
+`qitsLinkWorkIds(root, project, injector)` is the function under it, for a subtree drawn some other
+way; it answers a disposer that destroys every reference and puts its text back.
 
 **This is the fifth read, and the same rule as the other four**: the brief of an id in a commit
 subject is something no application rendering the commit has. `QitsWorkBriefs` (root) asks

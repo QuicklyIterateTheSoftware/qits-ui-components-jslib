@@ -281,3 +281,5 @@ export {
 export type { QitsWorkLink, QitsWorkLinkFactory } from './lib/work-ref';
 export { QitsCommitMessage, qitsCommitMessageRuns } from './lib/commit-message';
 export type { QitsCommitMessageRun } from './lib/commit-message';
+export { qitsLinkWorkIds, QitsWorkRefs } from './lib/work-refs';
+export type { QitsWorkIdsDisposer } from './lib/work-refs';
