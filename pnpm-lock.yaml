@@ -57,8 +57,8 @@ importers:
         specifier: 17.1.4
         version: 17.1.4
       '@qits/angular':
-        specifier: 2026.1107.200915
-        version: 2026.1107.200915(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(@angular/router@21.2.19(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(@angular/platform-browser@21.2.19(@angular/animations@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3)))(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3)))(rxjs@7.8.2))(@ngrx/signals@22.0.1(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@pact-foundation/pact@17.1.4)(eslint@10.8.0)(rxjs@7.8.2)(zone.js@0.16.3)
+        specifier: 2026.1109.10002
+        version: 2026.1109.10002(5ef4eb35915c7158c42413b6bfef01d1)
       '@qits/ci-golden-masters':
         specifier: 2026.1107.84029
         version: 2026.1107.84029
@@ -66,11 +66,11 @@ importers:
         specifier: 2026.1010.182320
         version: 2026.1010.182320
       '@qits/githost-golden-masters':
-        specifier: 2026.1020.204038
-        version: 2026.1020.204038
+        specifier: 2026.1109.41303
+        version: 2026.1109.41303
       '@qits/projects-golden-masters':
-        specifier: 2026.1107.185639
-        version: 2026.1107.185639
+        specifier: 2026.1109.1559
+        version: 2026.1109.1559
       '@storybook/addon-a11y':
         specifier: ^10.5.5
         version: 10.5.5(storybook@10.5.5(@types/react@19.2.18)(prettier@3.9.6)(react@19.2.8))
@@ -2058,8 +2058,8 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
-  '@qits/angular@2026.1107.200915':
-    resolution: {integrity: sha512-0KOapCRdOT1eyg8jkRlgy+FG78tMkki/Ne2Y420uazOjeMA0g83rsOBcq0uO2URG2uRabVBPG+4nkZ9kw3wD2Q==}
+  '@qits/angular@2026.1109.10002':
+    resolution: {integrity: sha512-0RpWSjnQVjtI1f+236DEBNKZrFaRdQjA6YhUNEdl5DqXbO0nn3sxY2uKCyRXRHXkKb8VXMEOIrOL5BhY81defA==}
     hasBin: true
     peerDependencies:
       '@angular/common': ^21.2.0 || ^22.1.0
@@ -2069,10 +2069,13 @@ packages:
       '@pact-foundation/pact': ^17.1.4
       eslint: ^9.0.0 || ^10.0.0
       rxjs: ^7.4.0
+      vitest: ^4.1.0 || ^5.0.0
     peerDependenciesMeta:
       '@pact-foundation/pact':
         optional: true
       eslint:
+        optional: true
+      vitest:
         optional: true
 
   '@qits/ci-golden-masters@2026.1107.84029':
@@ -2081,11 +2084,11 @@ packages:
   '@qits/edge-golden-masters@2026.1010.182320':
     resolution: {integrity: sha512-qyjH8jrEyPgDjwz23zdE2GI79BhoMQQhpKPrVXy/HxWxU+ODFuE9SRa3jAVwkmv3Ef7LjJrUDUL9PzZzB3YpSA==}
 
-  '@qits/githost-golden-masters@2026.1020.204038':
-    resolution: {integrity: sha512-zkKjO2npUq6FEMJBtZFo7BWF1MU4+FpMv4OKmVvwFIyfosUIHx9Q5xepn6x0r00XZv+EcFsCZdAOwgb0eYGGdg==}
+  '@qits/githost-golden-masters@2026.1109.41303':
+    resolution: {integrity: sha512-aCQ2dJ3muPScVdPga3K2ys93hp1hfQhaP6emFyk2J3d2VBW9KNdniA7ldBdpWYwOqQ7udiXz6V7qq1YBafmGLA==}
 
-  '@qits/projects-golden-masters@2026.1107.185639':
-    resolution: {integrity: sha512-2UZg5tJdLdyT/mwJnj2X2WP24GrBwfedJ7WJOZQA8obx/FGy0Dtv3J4ChacIoX1FH4tjYT+iZjStx0qOG3s9qg==}
+  '@qits/projects-golden-masters@2026.1109.1559':
+    resolution: {integrity: sha512-Ddh5XR+zSLv70iyFOHU8GRSC6Si4yJGKvON3w1d1b8AfDmSbF8HFxKG7DjBjzP0VvXdihcWbcFvJITyhwgAAsQ==}
 
   '@rolldown/binding-android-arm64@1.0.0-rc.4':
     resolution: {integrity: sha512-vRq9f4NzvbdZavhQbjkJBx7rRebDKYR9zHfO/Wg486+I7bSecdUapzCm5cyXoK+LHokTxgSq7A5baAXUZkIz0w==}
@@ -7421,7 +7424,7 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@qits/angular@2026.1107.200915(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(@angular/router@21.2.19(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(@angular/platform-browser@21.2.19(@angular/animations@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3)))(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3)))(rxjs@7.8.2))(@ngrx/signals@22.0.1(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@pact-foundation/pact@17.1.4)(eslint@10.8.0)(rxjs@7.8.2)(zone.js@0.16.3)':
+  '@qits/angular@2026.1109.10002(5ef4eb35915c7158c42413b6bfef01d1)':
     dependencies:
       '@angular/common': 21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2)
       '@angular/core': 21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3)
@@ -7443,6 +7446,7 @@ snapshots:
     optionalDependencies:
       '@pact-foundation/pact': 17.1.4
       eslint: 10.8.0
+      vitest: 4.1.10(@opentelemetry/api@1.10.0)(@types/node@22.20.1)(jsdom@28.1.0)(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(less@4.8.1)(sass@1.97.3))
     transitivePeerDependencies:
       - supports-color
       - zone.js
@@ -7451,9 +7455,9 @@ snapshots:
 
   '@qits/edge-golden-masters@2026.1010.182320': {}
 
-  '@qits/githost-golden-masters@2026.1020.204038': {}
+  '@qits/githost-golden-masters@2026.1109.41303': {}
 
-  '@qits/projects-golden-masters@2026.1107.185639': {}
+  '@qits/projects-golden-masters@2026.1109.1559': {}
 
   '@rolldown/binding-android-arm64@1.0.0-rc.4':
     optional: true
