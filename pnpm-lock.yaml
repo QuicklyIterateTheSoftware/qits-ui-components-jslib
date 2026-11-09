@@ -63,8 +63,8 @@ importers:
         specifier: 2026.1107.84029
         version: 2026.1107.84029
       '@qits/edge-golden-masters':
-        specifier: 2026.1010.182320
-        version: 2026.1010.182320
+        specifier: 2026.1109.84319
+        version: 2026.1109.84319
       '@qits/githost-golden-masters':
         specifier: 2026.1109.41303
         version: 2026.1109.41303
@@ -2081,8 +2081,8 @@ packages:
   '@qits/ci-golden-masters@2026.1107.84029':
     resolution: {integrity: sha512-GxpO4KN5ihrAKOAcbROfMxAS6YwSssi59XSoboobDy6HM8VYrZN889egy/MwismX3k4VBCqo+BhCwmyediHQSA==}
 
-  '@qits/edge-golden-masters@2026.1010.182320':
-    resolution: {integrity: sha512-qyjH8jrEyPgDjwz23zdE2GI79BhoMQQhpKPrVXy/HxWxU+ODFuE9SRa3jAVwkmv3Ef7LjJrUDUL9PzZzB3YpSA==}
+  '@qits/edge-golden-masters@2026.1109.84319':
+    resolution: {integrity: sha512-oEM/K7mN1DO8R30rYLD8apTg8tONfweWO1JAWHT3V6PIy0Hs36IC6KLUR/wGOcgLfVJYOwC2dqzINZZRZQEArA==}
 
   '@qits/githost-golden-masters@2026.1109.41303':
     resolution: {integrity: sha512-aCQ2dJ3muPScVdPga3K2ys93hp1hfQhaP6emFyk2J3d2VBW9KNdniA7ldBdpWYwOqQ7udiXz6V7qq1YBafmGLA==}
@@ -7453,7 +7453,7 @@ snapshots:
 
   '@qits/ci-golden-masters@2026.1107.84029': {}
 
-  '@qits/edge-golden-masters@2026.1010.182320': {}
+  '@qits/edge-golden-masters@2026.1109.84319': {}
 
   '@qits/githost-golden-masters@2026.1109.41303': {}
 
