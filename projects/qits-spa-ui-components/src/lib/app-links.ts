@@ -35,7 +35,7 @@ export const QITS_BROWSER_ORIGIN = new InjectionToken<string>('QITS_BROWSER_ORIG
  */
 export const QITS_PRIVATE_APP_HINT =
   'This service is private: it answers only through the network-access tunnel. Run ' +
-  "`qits network-access up` and set this browser's proxy auto-config URL to " +
+  "“qits network-access up” and set this browser's proxy auto-config URL to " +
   'http://127.0.0.1:47813/proxy.pac.';
 
 /** How long {@link QitsAppLinks.reachable} waits for a private application before saying no. */
