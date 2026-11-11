@@ -531,7 +531,7 @@ and after that whenever the platform says something happened —
 a stream on **qits-events' own origin** (`apiOrigin('qits-events')`), opened through
 `QITS_EVENT_SOURCE`, which defaults to `@qits/angular`'s: under `provideQitsBearerSignIn` a
 `FetchEventSource` with the bearer, otherwise the browser's `EventSource`. `@qits/angular` is
-imported by the main entry but declared nowhere in this package's manifest — every consuming app
+imported by the main entry (for this and for `<qits-work-ref>`'s `QitsExit`) but declared nowhere in this package's manifest — every consuming app
 depends on it directly, and a declared peer is what broke their bumps once (qits-1284). `BuildStatusChanged` fires on every transition of a run's status — queued, started, and
 each terminal state — so both edges of the active listing are announced. A frame carries **nothing
 this library reads**: it means only "go and look", and a burst of them is coalesced into one read
@@ -714,11 +714,32 @@ id's `getBoundingClientRect()` when it opens (below, flipped above where below d
 hidden`; the top layer also escapes a transformed ancestor and every `z-index`. Anchor positioning
 would do the placement in CSS, but is not in every browser the platform serves yet.
 
-**The link** is `QITS_WORK_LINK`, `(project, qualifiedId) => { href } | { routerLink }`. The default
-is a full-document link to the item's page on the **landing app**, the apex host that serves
-`/projects/<slug>/work/detail/<qualifiedId>`: the navigation's `applications.qits-landing.origin`
-(`QitsAppLinks.origin('qits-landing')`), else the environment origin (the apex itself on the
-platform), else the bare path. The landing app provides a `routerLink` instead.
+**The link** is `QITS_WORK_LINK`, `(project, qualifiedId) => QitsWorkLink`, one of three:
+
+- `{ href }` — a full-document link, to another application. The default is the item's page on the
+  **landing app**, the apex host that serves `/projects/<slug>/work/detail/<qualifiedId>`: the
+  navigation's `applications.qits-landing.origin` (`QitsAppLinks.origin('qits-landing')`), else the
+  environment origin (the apex itself on the platform), else the bare path.
+- `{ exit, params }` (`QitsWorkExitLink`) — a page of the application rendering the reference: an
+  exit the app declares with `@qits/angular`'s `outcomes()`, and its path params. The panel renders
+  it through `QitsExit` (`@qits/angular` `>= 2026.1109.234938`): a real `href`, `data-qits-outcome`
+  on the link, and a plain click that records the outcome and navigates through the router — so the
+  app's outcomes check and lint see where the reference leads. `outcomes()` needs an injection
+  context, so provide it with a factory; `qitsWorkExit(exit, params)` checks the params against the
+  exit's path:
+
+  ```ts
+  {
+    provide: QITS_WORK_LINK,
+    useFactory: (): QitsWorkLinkFactory => {
+      const refs = outcomes('open-work-ref', { opened: exit('projects/:slug/work/detail/:id') });
+      return (slug, id) => qitsWorkExit(refs.opened, { slug, id });
+    },
+  }
+  ```
+
+- `{ routerLink }` — **deprecated**, and removed by qits-2042: a router link the outcomes model
+  cannot see. An in-app link hands back an exit its app declares instead.
 
 ## The mermaid loader: `@qits/ui-components/mermaid`
 

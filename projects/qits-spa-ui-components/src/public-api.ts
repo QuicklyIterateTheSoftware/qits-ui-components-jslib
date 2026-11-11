@@ -276,9 +276,10 @@ export {
   QitsWorkRef,
   qitsRelativeTime,
   qitsWorkDetailPath,
+  qitsWorkExit,
   qitsWorkStatusTone,
 } from './lib/work-ref';
-export type { QitsWorkLink, QitsWorkLinkFactory } from './lib/work-ref';
+export type { QitsWorkExitLink, QitsWorkLink, QitsWorkLinkFactory } from './lib/work-ref';
 export { QitsCommitMessage, qitsCommitMessageRuns } from './lib/commit-message';
 export type { QitsCommitMessageRun } from './lib/commit-message';
 export { qitsLinkWorkIds, QitsWorkRefs } from './lib/work-refs';

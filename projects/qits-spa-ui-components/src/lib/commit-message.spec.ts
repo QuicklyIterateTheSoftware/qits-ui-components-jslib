@@ -1,11 +1,17 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { exit, outcomes } from '@qits/angular';
 
 import { qitsCommitMessageRuns, QitsCommitMessage } from './commit-message';
 import { QITS_NAVIGATION, toNavTree } from './navigation';
 import { provideQitsWorkBriefs, type QitsWorkBrief, type QitsWorkBriefSource } from './work-briefs';
-import { QITS_WORK_LINK, qitsRelativeTime, type QitsWorkLinkFactory } from './work-ref';
+import {
+  QITS_WORK_LINK,
+  qitsRelativeTime,
+  qitsWorkExit,
+  type QitsWorkLinkFactory,
+} from './work-ref';
 
 function brief(qualifiedId: string, overrides: Partial<QitsWorkBrief> = {}): QitsWorkBrief {
   return {
@@ -116,6 +122,9 @@ class Host {
     event.preventDefault(); // jsdom cannot follow it
   }
 }
+
+@Component({ template: 'work page' })
+class WorkPage {}
 
 describe('QitsCommitMessage', () => {
   let fixture: ComponentFixture<Host>;
@@ -414,10 +423,57 @@ describe('QitsCommitMessage', () => {
 
       await render();
       expect(href()).toBe('/projects/qits/work/detail/qits-1897');
+      expect(panel().querySelector('a')?.hasAttribute('data-qits-outcome')).toBe(false);
     });
 
-    it('is a router link where the application says so', async () => {
+    it('is an exit the application declares, and a plain click on it navigates', async () => {
+      await render([
+        provideRouter([{ path: 'work/:project/:id', component: WorkPage }]),
+        {
+          provide: QITS_WORK_LINK,
+          useFactory: (): QitsWorkLinkFactory => {
+            const refs = outcomes('open-work-ref', { opened: exit('work/:project/:id') });
+            return (p, id) => ({ exit: refs.opened, params: { project: p, id } });
+          },
+        },
+      ]);
+      const router = TestBed.inject(Router);
+      const link = panel().querySelector('a') as HTMLAnchorElement;
+      expect(href()).toBe('/work/qits/qits-1897');
+      expect(link.getAttribute('data-qits-outcome')).toBe('open-work-ref:opened');
+
+      // The tap on the id still opens the panel and goes nowhere; the panel's link navigates.
+      const tapped = await tap(trigger());
+      expect(tapped.defaultPrevented).toBe(true);
+      expect(isOpen()).toBe(true);
+      expect(router.url).toBe('/');
+
+      const event = click(link);
+      await fixture.whenStable();
+      expect(event.defaultPrevented).toBe(true); // the router's navigation, not the browser's
+      expect(router.url).toBe('/work/qits/qits-1897');
+      expect(fixture.componentInstance.rowClicks).toBe(0);
+    });
+
+    it('checks the params against the exit with qitsWorkExit', async () => {
+      await render([
+        provideRouter([]),
+        {
+          provide: QITS_WORK_LINK,
+          useFactory: (): QitsWorkLinkFactory => {
+            const refs = outcomes('open-work-ref', {
+              opened: exit('projects/:slug/work/detail/:id'),
+            });
+            return (slug, id) => qitsWorkExit(refs.opened, { slug, id });
+          },
+        },
+      ]);
+      expect(href()).toBe('/projects/qits/work/detail/qits-1897');
+    });
+
+    it('is a router link where the application says so (deprecated)', async () => {
       const inApp: QitsWorkLinkFactory = (project, id) => ({
+        // The deprecated variant, kept working until qits-2042 removes it.
         routerLink: ['/work', project, id],
       });
       await render([provideRouter([]), { provide: QITS_WORK_LINK, useValue: inApp }]);

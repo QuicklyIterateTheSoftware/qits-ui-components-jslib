@@ -12,17 +12,51 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { QitsExit, type ExitOutcome, type PathParams } from '@qits/angular';
 
 import { QitsAppLinks } from './app-links';
 import { QitsBadge, type QitsBadgeTone } from './badge';
 import { QitsWorkBriefs, type QitsWorkBrief } from './work-briefs';
 
 /**
- * Where a work reference leads: a full-document `href` (another application), or a `routerLink`
- * (a page of the application rendering the reference).
+ * An in-app work link: an exit the application declares with `@qits/angular`'s `outcomes()`, and
+ * the params its path takes. `<qits-work-ref>` renders it through `QitsExit`, so the link has a
+ * real `href`, a plain click records the outcome and navigates through the router, and the app's
+ * outcomes check and lint see where the reference leads. {@link qitsWorkExit} builds one and checks
+ * the params against the exit's path.
+ */
+export interface QitsWorkExitLink<P extends string = string> {
+  readonly exit: ExitOutcome<P>;
+  readonly params: PathParams<P>;
+}
+
+/**
+ * Where a work reference leads:
+ *
+ * - `{ href }` — a full-document link, to another application (the default: the landing app).
+ * - `{ exit, params }` — a page of the application rendering the reference, as an exit it declares
+ *   ({@link QitsWorkExitLink}).
+ * - `{ routerLink }` — **deprecated**, and removed by qits-2042: a router link the outcomes model
+ *   cannot see. An in-app link hands back an exit its app declares instead.
  */
 export type QitsWorkLink =
-  { readonly href: string } | { readonly routerLink: string | readonly unknown[] };
+  | { readonly href: string }
+  | QitsWorkExitLink
+  | {
+      /**
+       * @deprecated Invisible to the app's outcomes; removed by qits-2042. Hand back an exit the
+       * app declares with `outcomes()` instead: `{ exit, params }`.
+       */
+      readonly routerLink: string | readonly unknown[];
+    };
+
+/** An exit link, its params checked against the exit's path: `qitsWorkExit(refs.opened, { slug, id })`. */
+export function qitsWorkExit<P extends string>(
+  exit: ExitOutcome<P>,
+  params: PathParams<P>,
+): QitsWorkExitLink<P> {
+  return { exit, params };
+}
 
 /** Maps an item — its project as the reference was given it, and its qualified id — to its link. */
 export type QitsWorkLinkFactory = (project: string, qualifiedId: string) => QitsWorkLink;
@@ -48,10 +82,17 @@ function landingWorkLink(): QitsWorkLinkFactory {
 }
 
 /**
- * Where `<qits-work-ref>` links to. Override it where the work pages are this application's own:
+ * Where `<qits-work-ref>` links to. Override it where the work pages are this application's own,
+ * with an exit the application declares — `outcomes()` runs in the factory's injection context:
  *
  * ```ts
- * { provide: QITS_WORK_LINK, useValue: (p, id) => ({ routerLink: ['/projects', p, 'work', 'detail', id] }) }
+ * {
+ *   provide: QITS_WORK_LINK,
+ *   useFactory: (): QitsWorkLinkFactory => {
+ *     const refs = outcomes('open-work-ref', { opened: exit('projects/:slug/work/detail/:id') });
+ *     return (slug, id) => qitsWorkExit(refs.opened, { slug, id });
+ *   },
+ * }
  * ```
  */
 export const QITS_WORK_LINK = new InjectionToken<QitsWorkLinkFactory>('QITS_WORK_LINK', {
@@ -132,7 +173,7 @@ type PointerKind = 'mouse' | 'coarse';
 @Component({
   selector: 'qits-work-ref',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [QitsBadge, RouterLink],
+  imports: [QitsBadge, QitsExit, RouterLink],
   host: {
     '(pointerdown)': 'onPointerDown($event)',
     '(pointercancel)': 'pressing = undefined',
@@ -160,7 +201,11 @@ type PointerKind = 'mouse' | 'coarse';
       >
         <span [id]="panelId" role="tooltip" class="qits-work-ref-box">
           <span class="qits-work-ref-head">
-            @if (route(); as commands) {
+            @if (exit(); as to) {
+              <a class="qits-work-ref-link" [qitsExit]="to.exit" [exitParams]="to.params">{{
+                qualifiedId()
+              }}</a>
+            } @else if (route(); as commands) {
               <a class="qits-work-ref-link" [routerLink]="commands">{{ qualifiedId() }}</a>
             } @else {
               <a class="qits-work-ref-link" [href]="href()">{{ qualifiedId() }}</a>
@@ -317,6 +362,10 @@ export class QitsWorkRef {
   );
 
   private readonly link = computed(() => this.linkFor(this.linkProject(), this.qualifiedId()));
+  protected readonly exit = computed(() => {
+    const link = this.link();
+    return 'exit' in link ? link : undefined;
+  });
   protected readonly route = computed(() => {
     const link = this.link();
     return 'routerLink' in link ? link.routerLink : undefined;

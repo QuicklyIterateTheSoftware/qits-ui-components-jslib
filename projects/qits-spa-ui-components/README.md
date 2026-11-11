@@ -5,8 +5,11 @@ and the application skeleton `QitsMainLayout`. Standalone, `OnPush`, self-contai
 `@angular/core` and `@angular/common` are peers, and `@angular/router` for the layout's
 `<router-outlet />`. The layout's navigation comes over `@angular/common/http`, a subpath of a peer
 already there — nothing new to install. The build stream opens through `@qits/angular`'s
-`QITS_EVENT_SOURCE` (`>= 2026.1103.125108`), which the app itself depends on: this package imports
-it but does not declare it, so an app bumping this package needs that `@qits/angular` too. Platform
+`QITS_EVENT_SOURCE`, and `<qits-work-ref>` renders an in-app link through its `QitsExit`
+(`>= 2026.1109.234938`); the app itself depends on `@qits/angular`: this package imports it but does
+not declare it, so an app bumping this package needs that `@qits/angular` too. An in-app work link
+is an exit the app declares with `outcomes()` — `QITS_WORK_LINK`'s `{ exit, params }`; its
+`{ routerLink }` is deprecated. Platform
 reads go through the app's `HttpClient`; add `@qits/angular`'s `qitsBearerInterceptor` there.
 
 ## Install
