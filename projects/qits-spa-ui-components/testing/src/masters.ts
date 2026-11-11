@@ -67,6 +67,7 @@ function queryFromParams(masters: GoldenMasters): GoldenMasters {
       return { ...op, query };
     },
     body: (state, operationId) => masters.body(state, operationId),
+    text: (state, operationId) => masters.text(state, operationId),
   };
 }
 
@@ -93,5 +94,7 @@ export function payloadPresentOnly(
       if (!operations.includes(operationId)) return body;
       return Array.isArray(body) ? body.map(empty) : empty(body);
     },
+    // The payload emptying only applies to parsed JSON bodies; text passes through unchanged.
+    text: (state, operationId) => masters.text(state, operationId),
   };
 }
