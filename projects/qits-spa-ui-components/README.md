@@ -8,8 +8,7 @@ already there — nothing new to install. The build stream opens through `@qits/
 `QITS_EVENT_SOURCE`, and `<qits-work-ref>` renders an in-app link through its `QitsExit`
 (`>= 2026.1109.234938`); the app itself depends on `@qits/angular`: this package imports it but does
 not declare it, so an app bumping this package needs that `@qits/angular` too. An in-app work link
-is an exit the app declares with `outcomes()` — `QITS_WORK_LINK`'s `{ exit, params }`; its
-`{ routerLink }` is deprecated. Platform
+is an exit the app declares with `outcomes()` — `QITS_WORK_LINK`'s `{ exit, params }`. Platform
 reads go through the app's `HttpClient`; add `@qits/angular`'s `qitsBearerInterceptor` there.
 
 ## Install

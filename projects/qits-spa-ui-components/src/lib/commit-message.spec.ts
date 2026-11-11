@@ -470,14 +470,5 @@ describe('QitsCommitMessage', () => {
       ]);
       expect(href()).toBe('/projects/qits/work/detail/qits-1897');
     });
-
-    it('is a router link where the application says so (deprecated)', async () => {
-      const inApp: QitsWorkLinkFactory = (project, id) => ({
-        // The deprecated variant, kept working until qits-2042 removes it.
-        routerLink: ['/work', project, id],
-      });
-      await render([provideRouter([]), { provide: QITS_WORK_LINK, useValue: inApp }]);
-      expect(href()).toBe('/work/qits/qits-1897');
-    });
   });
 });

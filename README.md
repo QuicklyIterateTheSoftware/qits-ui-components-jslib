@@ -714,7 +714,7 @@ id's `getBoundingClientRect()` when it opens (below, flipped above where below d
 hidden`; the top layer also escapes a transformed ancestor and every `z-index`. Anchor positioning
 would do the placement in CSS, but is not in every browser the platform serves yet.
 
-**The link** is `QITS_WORK_LINK`, `(project, qualifiedId) => QitsWorkLink`, one of three:
+**The link** is `QITS_WORK_LINK`, `(project, qualifiedId) => QitsWorkLink`, one of two:
 
 - `{ href }` — a full-document link, to another application. The default is the item's page on the
   **landing app**, the apex host that serves `/projects/<slug>/work/detail/<qualifiedId>`: the
@@ -737,9 +737,6 @@ would do the placement in CSS, but is not in every browser the platform serves y
     },
   }
   ```
-
-- `{ routerLink }` — **deprecated**, and removed by qits-2042: a router link the outcomes model
-  cannot see. An in-app link hands back an exit its app declares instead.
 
 ## The mermaid loader: `@qits/ui-components/mermaid`
 
