@@ -1,9 +1,11 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideLocationMocks } from '@angular/common/testing';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
-import { QitsAppLinks, QITS_BROWSER_ORIGIN } from './app-links';
+import { QitsAppLinks, QITS_BROWSER_ORIGIN, QITS_PRIVATE_APP_HINT } from './app-links';
 import {
   provideQitsNavigationTree,
   QITS_NAVIGATION,
@@ -376,5 +378,148 @@ describe('QitsAppLinks api origins', () => {
     answer(toNavTree(undefined));
     TestBed.tick();
     await expect(origin).resolves.toBe('');
+  });
+});
+
+describe('QitsAppLinks exposure and reachability', () => {
+  const PROBE = '/stt/q/health/ready';
+  const ANSWER: QitsNavigation = {
+    slots: {},
+    applications: {
+      'qits-stt': { origin: 'https://stt.qits.example', exposure: 'private' },
+      'qits-projects': { origin: 'https://projects.qits.example' },
+    },
+  };
+
+  function answered(navigation: QitsNavigation = ANSWER): {
+    appLinks: QitsAppLinks;
+    http: HttpTestingController;
+  } {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideQitsNavigationTree(navigation),
+      ],
+    });
+    return { appLinks: TestBed.inject(QitsAppLinks), http: TestBed.inject(HttpTestingController) };
+  }
+
+  it('reads a private exposure, and public for a listed app without the key or an absent one', () => {
+    const { appLinks } = answered();
+    expect(appLinks.exposure('qits-stt')).toBe('private');
+    expect(appLinks.exposure('qits-projects')).toBe('public');
+    expect(appLinks.exposure('qits-nothing')).toBe('public');
+    // The origin of a private application is still the origin: exposure changes nothing there.
+    expect(appLinks.apiOrigin('qits-stt')).toBe('https://stt.qits.example');
+  });
+
+  it('says undefined until the navigation answers, and public where there is no navigation', () => {
+    const tree = signal<QitsNavTree | undefined>(undefined);
+    TestBed.configureTestingModule({
+      providers: [{ provide: QITS_NAVIGATION, useValue: { tree, failed: signal(false) } }],
+    });
+    const appLinks = TestBed.inject(QitsAppLinks);
+    expect(appLinks.exposure('qits-stt')).toBeUndefined();
+    tree.set(toNavTree(ANSWER));
+    expect(appLinks.exposure('qits-stt')).toBe('private');
+
+    TestBed.resetTestingModule();
+    expect(TestBed.inject(QitsAppLinks).exposure('qits-stt')).toBe('public');
+  });
+
+  it('resolves true for a public application without a request', async () => {
+    const { appLinks, http } = answered();
+    await expect(appLinks.reachable('qits-projects', '/projects/q/health/ready')).resolves.toBe(
+      true,
+    );
+    await expect(appLinks.reachable('qits-nothing', '/x')).resolves.toBe(true);
+    http.expectNone(() => true);
+  });
+
+  it('probes a private application with credentials, and is true for a 2xx', async () => {
+    const { appLinks, http } = answered();
+    const reachable = appLinks.reachable('qits-stt', PROBE);
+    const request = http.expectOne(`https://stt.qits.example${PROBE}`);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.withCredentials).toBe(true);
+    request.flush('{"status":"UP"}', { status: 200, statusText: 'OK' });
+    await expect(reachable).resolves.toBe(true);
+  });
+
+  it('is false for the public edge’s 404', async () => {
+    const { appLinks, http } = answered();
+    const reachable = appLinks.reachable('qits-stt', PROBE);
+    http.expectOne(`https://stt.qits.example${PROBE}`).flush('', { status: 404, statusText: 'No' });
+    await expect(reachable).resolves.toBe(false);
+  });
+
+  it('is false for a network error or a CORS refusal', async () => {
+    const { appLinks, http } = answered();
+    const reachable = appLinks.reachable('qits-stt', PROBE);
+    http.expectOne(`https://stt.qits.example${PROBE}`).error(new ProgressEvent('error'));
+    await expect(reachable).resolves.toBe(false);
+  });
+
+  it('is false when nothing answers within five seconds', async () => {
+    vi.useFakeTimers();
+    try {
+      const { appLinks, http } = answered();
+      let resolved: boolean | undefined;
+      void appLinks.reachable('qits-stt', PROBE).then((ok) => (resolved = ok));
+      const request = http.expectOne(`https://stt.qits.example${PROBE}`);
+      await vi.advanceTimersByTimeAsync(4_999);
+      expect(resolved).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(resolved).toBe(false);
+      expect(request.cancelled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('probes once per application and path, however often it is asked', async () => {
+    const { appLinks, http } = answered();
+    const first = appLinks.reachable('qits-stt', PROBE);
+    const second = appLinks.reachable('qits-stt', PROBE);
+    expect(second).toBe(first);
+    http.expectOne(`https://stt.qits.example${PROBE}`).flush('', { status: 200, statusText: 'OK' });
+    await expect(first).resolves.toBe(true);
+    await expect(appLinks.reachable('qits-stt', PROBE)).resolves.toBe(true);
+    http.expectNone(`https://stt.qits.example${PROBE}`);
+  });
+
+  it('waits for the navigation before it decides, then probes', async () => {
+    const tree = signal<QitsNavTree | undefined>(undefined);
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: QITS_NAVIGATION, useValue: { tree, failed: signal(false) } },
+      ],
+    });
+    const appLinks = TestBed.inject(QitsAppLinks);
+    const http = TestBed.inject(HttpTestingController);
+    const reachable = appLinks.reachable('qits-stt', PROBE);
+    TestBed.tick();
+    http.expectNone(() => true);
+
+    tree.set(toNavTree(ANSWER));
+    TestBed.tick();
+    http.expectOne(`https://stt.qits.example${PROBE}`).flush('', { status: 204, statusText: 'OK' });
+    await expect(reachable).resolves.toBe(true);
+  });
+
+  it('is false for a private application the navigation gave no origin', async () => {
+    const { appLinks, http } = answered({
+      applications: { 'qits-stt': { exposure: 'private' } },
+    });
+    await expect(appLinks.reachable('qits-stt', PROBE)).resolves.toBe(false);
+    http.expectNone(() => true);
+  });
+
+  it('names the tunnel and the proxy auto-config URL in its hint', () => {
+    expect(QITS_PRIVATE_APP_HINT).toContain('qits network-access up');
+    expect(QITS_PRIVATE_APP_HINT).toContain('http://127.0.0.1:47813/proxy.pac');
   });
 });

@@ -230,6 +230,7 @@ describe('toNavTree', () => {
       projectOrigin: undefined,
       apiDocs: {},
       origins: {},
+      exposures: {},
       legacy: [],
     });
   });
@@ -248,6 +249,27 @@ describe('toNavTree', () => {
     expect(tree.origins).toEqual({
       'qits-projects': 'https://projects.example',
       'qits-ci': 'https://ci.example',
+    });
+  });
+
+  it('carries a private exposure beside the origin, leaves origins alone, and ignores unknown values', () => {
+    const tree = toNavTree({
+      slots: {},
+      applications: {
+        'qits-stt': { origin: 'https://stt.example', exposure: 'private' },
+        'qits-ci': { origin: 'https://ci.example' },
+        'qits-odd': { origin: 'https://odd.example', exposure: 'secret' as never },
+        'qits-null': null,
+      },
+    });
+    expect(tree.exposures).toEqual({ 'qits-stt': 'private' });
+    expect(tree.origins).toEqual({
+      'qits-stt': 'https://stt.example',
+      'qits-ci': 'https://ci.example',
+      'qits-odd': 'https://odd.example',
+    });
+    expect(toNavTree({ applications: { 'qits-stt': { exposure: 'private' } } }).exposures).toEqual({
+      'qits-stt': 'private',
     });
   });
 

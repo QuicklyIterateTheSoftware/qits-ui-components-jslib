@@ -1,3 +1,4 @@
+import { HttpClient } from '@angular/common/http';
 import {
   DOCUMENT,
   effect,
@@ -9,7 +10,12 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { QITS_NAVIGATION, type QitsNavEntry, type QitsNavSlot } from './navigation';
+import {
+  QITS_NAVIGATION,
+  type QitsAppExposure,
+  type QitsNavEntry,
+  type QitsNavSlot,
+} from './navigation';
 import { scopePath, type QitsScope } from './scope';
 
 /**
@@ -20,6 +26,20 @@ export const QITS_BROWSER_ORIGIN = new InjectionToken<string>('QITS_BROWSER_ORIG
   providedIn: 'root',
   factory: () => inject(DOCUMENT).location?.origin ?? '',
 });
+
+/**
+ * The sentence every SPA shows where a private application cannot be reached from this browser —
+ * one shared string, so the hint reads the same wherever it appears. It names the two things that
+ * put a browser on the tunnel: the companion (`qits network-access up`) and the proxy auto-config
+ * file it serves.
+ */
+export const QITS_PRIVATE_APP_HINT =
+  'This service is private: it answers only through the network-access tunnel. Run ' +
+  "`qits network-access up` and set this browser's proxy auto-config URL to " +
+  'http://127.0.0.1:47813/proxy.pac.';
+
+/** How long {@link QitsAppLinks.reachable} waits for a private application before saying no. */
+const PROBE_TIMEOUT_MS = 5_000;
 
 /** The host part of an origin, port included — or `undefined` for something that is not one. */
 function hostOf(origin: string | undefined): string | undefined {
@@ -58,6 +78,10 @@ export class QitsAppLinks {
    */
   private readonly router = inject(Router, { optional: true });
   private readonly injector = inject(Injector);
+  /** Optional like the router: only {@link reachable} needs it, and a bare spec need not have it. */
+  private readonly http = inject(HttpClient, { optional: true });
+  /** One probe per application and path, for the life of this (root) service — the page's. */
+  private readonly probes = new Map<string, Promise<boolean>>();
 
   /** The first entry for an application — one application may appear in several slots. */
   private entry(app: string): QitsNavEntry | undefined {
@@ -126,6 +150,90 @@ export class QitsAppLinks {
     return new Promise((resolve) =>
       afterApiOrigin(this, app, this.injector, () => resolve(this.apiUrl(app, path) ?? path)),
     );
+  }
+
+  /**
+   * Whether an application answers on the public internet or only through the network-access
+   * tunnel, as `applications.<app>.exposure` of the navigation states it.
+   *
+   * - `undefined`: the navigation has not answered yet — the same moment {@link apiOrigin} says
+   *   `undefined`, and like it a signal read that re-runs when the answer lands.
+   * - `'private'`: the navigation listed the application with `exposure: 'private'`. Only the
+   *   public edge's answer to a signed-in caller does that; its origin is then reachable only from
+   *   a browser on the tunnel — see {@link reachable}.
+   * - `'public'`: everything else once it has answered — an application listed without the key,
+   *   one the navigation does not name at all, a navigation that failed, and no navigation provided.
+   *   Absence is not a third answer: an application the platform does not name is simply absent,
+   *   which {@link apiOrigin}'s `''` already says.
+   */
+  exposure(app: string): QitsAppExposure | undefined {
+    if (!this.source) return 'public';
+    const tree = this.source.tree();
+    if (!tree) return undefined;
+    return tree.exposures?.[app] === 'private' ? 'private' : 'public';
+  }
+
+  /**
+   * Whether this browser can reach an application, for a caller deciding whether to offer what
+   * depends on it. Waits for the navigation first, as {@link whenApiUrl} does, then:
+   *
+   * - an application whose {@link exposure} is not `'private'` resolves `true` without a request — a
+   *   public application's failures are its own call's to report;
+   * - a private one gets one `GET <origin><probePath>` with credentials (the session cookie, which
+   *   the private edge honours cross-origin under the domain), and resolves `true` only for a 2xx.
+   *   A network error, a CORS refusal, the public edge's 404 for a name it does not route, any
+   *   other status, a private application with no origin and no answer within 5 s all resolve
+   *   `false` — show {@link QITS_PRIVATE_APP_HINT} then.
+   *
+   * Never rejects. The promise is kept per application and path for the life of the service, so
+   * every caller on the page shares one probe; a reader who connects the tunnel reloads the page.
+   */
+  reachable(app: string, probePath: string): Promise<boolean> {
+    const key = `${app} ${probePath}`;
+    let probe = this.probes.get(key);
+    if (!probe) {
+      probe = new Promise<boolean>((resolve) =>
+        afterApiOrigin(this, app, this.injector, (origin) => {
+          if (this.exposure(app) !== 'private') resolve(true);
+          else if (!origin) resolve(false);
+          else void this.probe(join(origin, probePath)).then(resolve);
+        }),
+      );
+      this.probes.set(key, probe);
+    }
+    return probe;
+  }
+
+  /** One credentialed `GET`: `true` for a 2xx inside the timeout, `false` for anything else. */
+  private probe(url: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const http = this.http;
+      if (!http) {
+        resolve(false);
+        return;
+      }
+      let settled = false;
+      let subscription: { unsubscribe(): void } | undefined;
+      const finish = (ok: boolean): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        subscription?.unsubscribe();
+        resolve(ok);
+      };
+      const timer = setTimeout(() => finish(false), PROBE_TIMEOUT_MS);
+      try {
+        subscription = http
+          .get(url, { observe: 'response', responseType: 'text', withCredentials: true })
+          .subscribe({
+            next: (response) => finish(response.status >= 200 && response.status < 300),
+            error: () => finish(false),
+          });
+        if (settled) subscription.unsubscribe();
+      } catch {
+        finish(false);
+      }
+    });
   }
 
   /** Where the environment itself is served — the origin of a clone URL, and of a legacy link. */

@@ -298,8 +298,11 @@ exclusive: `legacy` means "this platform cannot tell me its shape", and the side
 flat list it always drew.
 
 `applications` carries facts about an application rather than placements of it: `apiDocs`, the path
-of its browsable API document, and `origin`, where it answers — normalised into `tree.apiDocs` and
-`tree.origins` (no trailing slash).
+of its browsable API document, `origin`, where it answers, and `exposure` — normalised into
+`tree.apiDocs`, `tree.origins` (no trailing slash) and `tree.exposures`. `exposure` is present only
+as `"private"`, on an application served solely through the network-access tunnel: the public edge
+lists such an application, with its origin, only to a signed-in caller, and every public entry
+carries no key (qits-2061). A private entry's origin lands in `tree.origins` like any other.
 
 `provideQitsNavigationTree(payload)` and `provideQitsNavigationLinks([…])` answer the same contract
 from a literal — specs, stories, an `ng serve` with no platform in front of it. Nothing is fetched,
@@ -380,6 +383,39 @@ bearer, never the session cookie, which the edge no longer turns into an identit
 a fallback: an edge too old to serve `applications.<app>.origin` is also too old to answer the CORS
 request such a call would be. `origin(app)` and `apiDocsUrl(app)` prefer the declared origin too,
 so an application with no navigation entry still has its own address.
+
+### Private applications
+
+An application with `"exposure": "private"` answers only through the network-access tunnel, so its
+origin is real but a browser off the tunnel cannot reach it — the public edge answers it with a 404.
+
+```ts
+appLinks.exposure('qits-stt'); // 'private', 'public' or undefined
+await appLinks.reachable('qits-stt', '/stt/q/health/ready'); // true or false, never rejects
+QITS_PRIVATE_APP_HINT; // the sentence to show when it is false
+```
+
+| `exposure(app)` | means                                                                                           |
+| --------------- | ----------------------------------------------------------------------------------------------- |
+| `undefined`     | the navigation has not answered yet (the moment `apiOrigin` says `undefined`)                   |
+| `'private'`     | listed with `exposure: "private"`                                                               |
+| `'public'`      | anything else: listed without the key, not listed at all, a failed navigation, or none provided |
+
+`reachable(app, probePath)` waits for the navigation like `whenApiUrl`, then resolves `true` at once
+for an application that is not private — no request. For a private one it issues one `GET
+<origin><probePath>` through `HttpClient` with `withCredentials: true` (the session cookie rides
+cross-origin; the app's bearer interceptor adds its bearer as for any platform call) and resolves
+`true` only for a 2xx inside 5 seconds: a network error, a CORS refusal, the public edge's 404, any
+other status, a private application with no origin, or no answer in time are all `false`. It never
+rejects, and the promise is kept per application and path for the life of the page, so every caller
+shares one probe. Pick a probe path that answers 2xx without side effects — a health endpoint.
+
+`QITS_PRIVATE_APP_HINT` is the one sentence every SPA shows where `reachable` said `false`: it names
+`qits network-access up` and the proxy auto-config URL `http://127.0.0.1:47813/proxy.pac`.
+
+The probe is not a library pact block: `QitsAppLinks` is no calling symbol of
+`@qits/ui-components/testing`, so the pact guard neither requires nor writes a row for it, and the
+signed-in navigation that carries `exposure` has no golden-master row either.
 
 `href` is the origin from the navigation, the scope path, then the path. An application the platform
 does **not** serve on a host of its own is reached at its own segment — the `path` every entry

@@ -92,6 +92,13 @@ export interface QitsNavEntryBody {
 }
 
 /**
+ * Whether an application answers on the public internet (`'public'`) or only through the
+ * network-access tunnel (`'private'`). The edge spells out only the second: it lists a private
+ * application, with its origin, solely to a signed-in caller, and a public entry carries no key.
+ */
+export type QitsAppExposure = 'private' | 'public';
+
+/**
  * Per-application metadata the platform serves beside the slots — facts about an application
  * rather than placements of it. `apiDocs` is where its browsable API document lives, as one of the
  * application's own routes (`/ci/q/swagger-ui`) — served by the application's own host.
@@ -105,6 +112,11 @@ export interface QitsNavEntryBody {
 export interface QitsNavApplication {
   readonly apiDocs?: string | null;
   readonly origin?: string | null;
+  /**
+   * `'private'` for an application served only through the network-access tunnel — which the
+   * public edge names only to a signed-in caller. Absent for every public application.
+   */
+  readonly exposure?: QitsAppExposure | null;
 }
 
 /**
@@ -165,6 +177,12 @@ export interface QitsNavTree {
    * always fills it.
    */
   readonly origins?: Readonly<Record<string, string>>;
+  /**
+   * Each application's declared exposure, by application name — the `applications.<app>.exposure`
+   * the platform served. Only applications that carried a known value appear; absence is public.
+   * Optional on the type for the same reason as {@link origins}; `toNavTree` always fills it.
+   */
+  readonly exposures?: Readonly<Record<string, QitsAppExposure>>;
   /** The flat links of a pre-slots answer, and `undefined` whenever slots were served. */
   readonly legacy: readonly QitsNavLink[] | undefined;
 }
@@ -206,6 +224,7 @@ const NOTHING: QitsNavTree = {
   projectOrigin: undefined,
   apiDocs: {},
   origins: {},
+  exposures: {},
   legacy: [],
 };
 
@@ -243,6 +262,19 @@ function toOrigins(applications: QitsNavigation['applications']): Readonly<Recor
   return origins;
 }
 
+/** The exposures the platform declared; a value this library does not know is ignored. */
+function toExposures(
+  applications: QitsNavigation['applications'],
+): Readonly<Record<string, QitsAppExposure>> {
+  const exposures: Record<string, QitsAppExposure> = {};
+  for (const [app, metadata] of Object.entries(applications ?? {})) {
+    const exposure = metadata?.exposure;
+    if (!app || (exposure !== 'private' && exposure !== 'public')) continue;
+    exposures[app] = exposure;
+  }
+  return exposures;
+}
+
 /** Entries first by position, then by label — so two entries at one position still have an order. */
 function inOrder(a: QitsNavEntry, b: QitsNavEntry): number {
   return a.position - b.position || a.label.localeCompare(b.label);
@@ -262,6 +294,7 @@ export function toNavTree(body: QitsNavigation | null | undefined): QitsNavTree 
       projectOrigin: body?.projectOrigin,
       apiDocs: toApiDocs(body?.applications),
       origins: toOrigins(body?.applications),
+      exposures: toExposures(body?.applications),
       legacy: body?.links ?? [],
     };
   }
@@ -287,6 +320,7 @@ export function toNavTree(body: QitsNavigation | null | undefined): QitsNavTree 
     projectOrigin: body?.projectOrigin,
     apiDocs: toApiDocs(body?.applications),
     origins: toOrigins(body?.applications),
+    exposures: toExposures(body?.applications),
     legacy: undefined,
   };
 }
