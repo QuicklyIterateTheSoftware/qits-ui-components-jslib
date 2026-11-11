@@ -57,8 +57,8 @@ importers:
         specifier: 17.1.4
         version: 17.1.4
       '@qits/angular':
-        specifier: 2026.1111.124046
-        version: 2026.1111.124046(b7ba9e41ccd09d7a247d74276c949f6c)
+        specifier: 2026.1111.141932
+        version: 2026.1111.141932(b7ba9e41ccd09d7a247d74276c949f6c)
       '@qits/ci-golden-masters':
         specifier: 2026.1109.132507
         version: 2026.1109.132507
@@ -2058,8 +2058,8 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
-  '@qits/angular@2026.1111.124046':
-    resolution: {integrity: sha512-KdnxFrQUeme4CKZcIHs2sTl8aRuIk7bjrrXrYkQQit6apjqR+h6O3pL6MOFHE8mk5B4O7h2iORXG68FofQMGBw==}
+  '@qits/angular@2026.1111.141932':
+    resolution: {integrity: sha512-CVHlM+JxrzYuKWCsj7MYgSuyFK2WkQQ8tLd/m1fnuy8n6QeP+TSDQQMfkQu7644JSuI0kwDlycYoAcc4yuf49w==}
     hasBin: true
     peerDependencies:
       '@angular/common': ^21.2.0 || ^22.1.0
@@ -7428,7 +7428,7 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@qits/angular@2026.1111.124046(b7ba9e41ccd09d7a247d74276c949f6c)':
+  '@qits/angular@2026.1111.141932(b7ba9e41ccd09d7a247d74276c949f6c)':
     dependencies:
       '@angular/common': 21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2)
       '@angular/compiler': 21.2.19
