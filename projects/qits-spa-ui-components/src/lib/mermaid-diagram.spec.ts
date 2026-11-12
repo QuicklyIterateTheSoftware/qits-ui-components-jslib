@@ -139,21 +139,103 @@ describe('QitsMermaidDiagram', () => {
     );
   });
 
-  it('draws in the dark theme where the host prefers a dark scheme', async () => {
-    const original = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
-      matches: query === '(prefers-color-scheme: dark)',
-      media: query,
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-    })) as unknown as typeof window.matchMedia;
-    try {
+  describe('the scheme', () => {
+    // What theme.css says about the scheme, reduced to the one property the diagram reads: a
+    // forced `data-theme="dark"` sets it; the OS-following half is a media query jsdom cannot
+    // evaluate, so the specs that need it set the property inline instead.
+    let style: HTMLStyleElement;
+    let original: typeof window.matchMedia;
+    let mediaListeners: ((event: Partial<MediaQueryListEvent>) => void)[];
+
+    beforeEach(() => {
+      style = document.createElement('style');
+      style.textContent = ":root[data-theme='dark'] { --qits-color-scheme: dark; }";
+      document.head.appendChild(style);
+      mediaListeners = [];
+      original = window.matchMedia;
+      // A dark OS throughout: the diagram must not take that as its answer.
+      window.matchMedia = ((query: string) => ({
+        matches: query === '(prefers-color-scheme: dark)',
+        media: query,
+        addEventListener: (_: string, listener: (event: Partial<MediaQueryListEvent>) => void) =>
+          mediaListeners.push(listener),
+        removeEventListener: (_: string, listener: (event: Partial<MediaQueryListEvent>) => void) =>
+          (mediaListeners = mediaListeners.filter((l) => l !== listener)),
+      })) as unknown as typeof window.matchMedia;
+    });
+
+    afterEach(() => {
+      window.matchMedia = original;
+      style.remove();
+      document.documentElement.removeAttribute('data-theme');
+      document.documentElement.style.removeProperty('--qits-color-scheme');
+    });
+
+    it('stays neutral on a dark OS when the page carries no theme', async () => {
       const fixture = setup();
       await settle(fixture);
+      expect(mermaid.initialize).toHaveBeenCalledTimes(1);
+      expect(mermaid.initialize).toHaveBeenCalledWith(
+        expect.objectContaining({ theme: 'neutral' }),
+      );
+    });
+
+    it("draws dark when the page's --qits-color-scheme is dark", async () => {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      const fixture = setup();
+      await settle(fixture);
+      expect(mermaid.initialize).toHaveBeenCalledTimes(1);
       expect(mermaid.initialize).toHaveBeenCalledWith(expect.objectContaining({ theme: 'dark' }));
-    } finally {
-      window.matchMedia = original;
-    }
+    });
+
+    it("redraws when <html>'s data-theme moves the scheme, both ways", async () => {
+      const fixture = setup();
+      await settle(fixture);
+
+      document.documentElement.setAttribute('data-theme', 'dark');
+      await settle(fixture);
+      expect(mermaid.initialize).toHaveBeenLastCalledWith(
+        expect.objectContaining({ theme: 'dark' }),
+      );
+
+      document.documentElement.setAttribute('data-theme', 'light');
+      await settle(fixture);
+      expect(mermaid.initialize).toHaveBeenLastCalledWith(
+        expect.objectContaining({ theme: 'neutral' }),
+      );
+      expect(mermaid.render).toHaveBeenCalledTimes(3);
+    });
+
+    it('redraws when the OS scheme changes and the property follows it', async () => {
+      const fixture = setup();
+      await settle(fixture);
+
+      document.documentElement.style.setProperty('--qits-color-scheme', 'dark');
+      for (const listener of mediaListeners) listener({ matches: true });
+      await settle(fixture);
+      expect(mermaid.initialize).toHaveBeenLastCalledWith(
+        expect.objectContaining({ theme: 'dark' }),
+      );
+    });
+
+    it('does not redraw when data-theme changes but the scheme does not', async () => {
+      const fixture = setup();
+      await settle(fixture);
+      document.documentElement.setAttribute('data-theme', 'light');
+      await settle(fixture);
+      expect(mermaid.render).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops watching once destroyed', async () => {
+      const fixture = setup();
+      await settle(fixture);
+      fixture.destroy();
+      expect(mediaListeners).toHaveLength(0);
+
+      document.documentElement.setAttribute('data-theme', 'dark');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(mermaid.initialize).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('does not import mermaid when it is not rendered', async () => {

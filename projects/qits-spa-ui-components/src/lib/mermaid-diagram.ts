@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  DOCUMENT,
   effect,
   ElementRef,
   inject,
@@ -11,6 +12,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /** The mermaid theme a diagram is drawn in: `neutral` on a light page, `dark` on a dark one. */
 export type QitsMermaidTheme = 'neutral' | 'dark';
@@ -61,6 +63,21 @@ let sequence = 0;
 const DARK = '(prefers-color-scheme: dark)';
 
 /**
+ * The scheme the page is in, as theme.css says it: `dark` exactly when the document's
+ * `--qits-color-scheme` is `dark`. The page decides, not the OS: an app with a forced
+ * `data-theme="light"` stays light on a dark OS, and an app that loads no theme has no such
+ * property, so its diagrams stay `neutral` on its light page whatever the OS prefers.
+ */
+function pageTheme(document: Document): QitsMermaidTheme {
+  const view = document.defaultView;
+  if (!view || typeof view.getComputedStyle !== 'function') return 'neutral';
+  const scheme = view
+    .getComputedStyle(document.documentElement)
+    .getPropertyValue('--qits-color-scheme');
+  return scheme.trim() === 'dark' ? 'dark' : 'neutral';
+}
+
+/**
  * One Mermaid diagram, drawn from its definition — qits-docs-frontend's `renderMermaidBlocks`,
  * lifted into the library.
  *
@@ -72,8 +89,10 @@ const DARK = '(prefers-color-scheme: dark)';
  *   its `<pre>`, same as any other load failure.
  * - A definition mermaid cannot draw, or mermaid failing to load, leaves the definition in a
  *   `<pre>`, legible as text. It never throws.
- * - It redraws when `definition` changes, and when the host's `prefers-color-scheme` does:
- *   `theme: 'neutral'` on a light page, `'dark'` on a dark one.
+ * - It redraws when `definition` changes, and when the page's scheme does: `theme: 'dark'` exactly
+ *   when theme.css's `--qits-color-scheme` on `<html>` is `dark`, `'neutral'` otherwise — so
+ *   always `'neutral'` in an app that loads no theme. That property moves with the OS (when
+ *   `<html>` has no `data-theme`) and with `<html>`'s `data-theme`, so both are watched.
  */
 @Component({
   selector: 'qits-mermaid-diagram',
@@ -92,47 +111,40 @@ const DARK = '(prefers-color-scheme: dark)';
       <p class="drawing">Drawing diagram…</p>
     }
   `,
-  styles: `
-    :host {
-      display: block;
-      min-width: 0;
-    }
-    .diagram {
-      overflow-x: auto;
-    }
-    .diagram ::ng-deep svg {
-      max-width: 100%;
-      height: auto;
-    }
-    .definition {
-      margin: 0;
-      padding: 0.5rem 0.75rem;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.75rem;
-      line-height: 1.4;
-      white-space: pre;
-      overflow-x: auto;
-      color: #111827;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-    }
-    .drawing {
-      margin: 0.25rem 0;
-      color: #6b7280;
-      font-size: 0.8rem;
-    }
-    @media (prefers-color-scheme: dark) {
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+        min-width: 0;
+      }
+      .diagram {
+        overflow-x: auto;
+      }
+      .diagram ::ng-deep svg {
+        max-width: 100%;
+        height: auto;
+      }
       .definition {
-        color: #e5e7eb;
-        background: #111827;
-        border-color: #374151;
+        margin: 0;
+        padding: 0.5rem 0.75rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.75rem;
+        line-height: 1.4;
+        white-space: pre;
+        overflow-x: auto;
+        color: var(--color-fg);
+        background: var(--color-surface-subtle);
+        border: 1px solid var(--color-line);
+        border-radius: 6px;
       }
       .drawing {
-        color: #9ca3af;
+        margin: 0.25rem 0;
+        color: var(--color-fg-muted);
+        font-size: 0.8rem;
       }
-    }
-  `,
+    `,
+  ],
 })
 export class QitsMermaidDiagram {
   /** The Mermaid definition — `erDiagram …`, `flowchart …` — without the Markdown fence. */
@@ -148,17 +160,24 @@ export class QitsMermaidDiagram {
   private drawn = 0;
 
   constructor() {
-    const media =
-      typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-        ? window.matchMedia(DARK)
-        : null;
-    if (media) {
-      this.theme.set(media.matches ? 'dark' : 'neutral');
-      const follow = (event: MediaQueryListEvent) =>
-        this.theme.set(event.matches ? 'dark' : 'neutral');
-      media.addEventListener?.('change', follow);
-      inject(DestroyRef).onDestroy(() => media.removeEventListener?.('change', follow));
-    }
+    // The media query and the attribute are only the moments the property may have moved; what
+    // it moved to is read off the page each time. A set to the same theme is no change to the
+    // signal, so nothing redraws for nothing.
+    const document = inject(DOCUMENT);
+    const follow = () => this.theme.set(pageTheme(document));
+    follow();
+    const view = document.defaultView;
+    const media = typeof view?.matchMedia === 'function' ? view.matchMedia(DARK) : null;
+    media?.addEventListener?.('change', follow);
+    const observer = typeof MutationObserver === 'function' ? new MutationObserver(follow) : null;
+    observer?.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    inject(DestroyRef).onDestroy(() => {
+      media?.removeEventListener?.('change', follow);
+      observer?.disconnect();
+    });
 
     effect(() => {
       const definition = this.definition();
