@@ -63,14 +63,14 @@ importers:
         specifier: 2026.1109.132507
         version: 2026.1109.132507
       '@qits/edge-golden-masters':
-        specifier: 2026.1109.84319
-        version: 2026.1109.84319
+        specifier: 2026.1111.182144
+        version: 2026.1111.182144
       '@qits/githost-golden-masters':
         specifier: 2026.1109.41303
         version: 2026.1109.41303
       '@qits/projects-golden-masters':
-        specifier: 2026.1111.82815
-        version: 2026.1111.82815
+        specifier: 2026.1111.203405
+        version: 2026.1111.203405
       '@storybook/addon-a11y':
         specifier: ^10.5.5
         version: 10.5.5(storybook@10.5.5(@types/react@19.2.18)(prettier@3.9.6)(react@19.2.8))
@@ -2085,14 +2085,14 @@ packages:
   '@qits/ci-golden-masters@2026.1109.132507':
     resolution: {integrity: sha512-pS4lwUmOnSAYd+sL/4bOMQj9A9BAeByyQD8vtlUHjVXPrzD60Ayl2SwTAE38FCH/C+TX8+SrbzvSurI50NsVPw==}
 
-  '@qits/edge-golden-masters@2026.1109.84319':
-    resolution: {integrity: sha512-oEM/K7mN1DO8R30rYLD8apTg8tONfweWO1JAWHT3V6PIy0Hs36IC6KLUR/wGOcgLfVJYOwC2dqzINZZRZQEArA==}
+  '@qits/edge-golden-masters@2026.1111.182144':
+    resolution: {integrity: sha512-JTRYJXBcnCmP6NnoDS+9E6OvxAbqDmF5r4tsX576sX2TKEoaWoYFS6dfqnyEQKSF5xqFiihitTOEIaXsq3Ec2A==}
 
   '@qits/githost-golden-masters@2026.1109.41303':
     resolution: {integrity: sha512-aCQ2dJ3muPScVdPga3K2ys93hp1hfQhaP6emFyk2J3d2VBW9KNdniA7ldBdpWYwOqQ7udiXz6V7qq1YBafmGLA==}
 
-  '@qits/projects-golden-masters@2026.1111.82815':
-    resolution: {integrity: sha512-Rk7tGaYYYXRxXZUNGLKkNnzzD0hvygGpEE41AXu0ma8boteMSBFTKUH1hZE3xS7U5VBIpRyoYRbS13L7u8pw8A==}
+  '@qits/projects-golden-masters@2026.1111.203405':
+    resolution: {integrity: sha512-ubO5xoDKeP5oDbawdM/RIWwECZEhxuqJba7LAACectglUco9nsXvY/x+KKLFodfFyjoaWPcWmnAc1We8tlsM+g==}
 
   '@rolldown/binding-android-arm64@1.0.0-rc.4':
     resolution: {integrity: sha512-vRq9f4NzvbdZavhQbjkJBx7rRebDKYR9zHfO/Wg486+I7bSecdUapzCm5cyXoK+LHokTxgSq7A5baAXUZkIz0w==}
@@ -7459,11 +7459,11 @@ snapshots:
 
   '@qits/ci-golden-masters@2026.1109.132507': {}
 
-  '@qits/edge-golden-masters@2026.1109.84319': {}
+  '@qits/edge-golden-masters@2026.1111.182144': {}
 
   '@qits/githost-golden-masters@2026.1109.41303': {}
 
-  '@qits/projects-golden-masters@2026.1111.82815': {}
+  '@qits/projects-golden-masters@2026.1111.203405': {}
 
   '@rolldown/binding-android-arm64@1.0.0-rc.4':
     optional: true
