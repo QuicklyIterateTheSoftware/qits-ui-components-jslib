@@ -16,6 +16,7 @@ import { QitsExit, type ExitOutcome, type PathParams } from '@qits/angular';
 import { QitsAppLinks } from './app-links';
 import { QitsBadge, type QitsBadgeTone } from './badge';
 import { QitsWorkBriefs, type QitsWorkBrief } from './work-briefs';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /**
  * An in-app work link: an exit the application declares with `@qits/angular`'s `outcomes()`, and
@@ -210,92 +211,95 @@ type PointerKind = 'mouse' | 'coarse';
     } @else {
       <ng-container>{{ qualifiedId() }}</ng-container>
     }`,
-  styles: `
-    :host {
-      display: inline;
-    }
-    .qits-work-ref {
-      text-decoration: underline dotted;
-      text-decoration-thickness: 1px;
-      text-underline-offset: 2px;
-      cursor: help;
-      border-radius: 2px;
-    }
-    .qits-work-ref:focus-visible {
-      outline: 2px solid #3b82f6;
-      outline-offset: 1px;
-    }
-    .qits-work-ref-panel {
-      display: none;
-      position: fixed;
-      inset: auto;
-      top: 0;
-      left: 0;
-      z-index: 1000;
-      margin: 0;
-      border: 0;
-      background: transparent;
-      overflow: visible;
-      color: inherit;
-      /* The transparent strip between the id and the box: the pointer crosses it onto the panel. */
-      padding: 4px 0 0;
-      width: max-content;
-      height: auto;
-    }
-    .qits-work-ref-panel.qits-work-ref-above {
-      padding: 0 0 4px;
-    }
-    .qits-work-ref-panel-open {
-      display: block;
-    }
-    .qits-work-ref-box {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      box-sizing: border-box;
-      max-width: min(360px, calc(100vw - 16px));
-      padding: 8px 10px;
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      box-shadow: 0 8px 24px rgb(17 24 39 / 12%);
-      color: #111827;
-      font-family: inherit;
-      font-size: 13px;
-      font-weight: 400;
-      font-style: normal;
-      line-height: 1.4;
-      text-align: left;
-      text-decoration: none;
-      white-space: normal;
-      cursor: auto;
-    }
-    .qits-work-ref-head {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
-    }
-    .qits-work-ref-link {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12px;
-      color: #1d4ed8;
-      text-decoration: none;
-    }
-    .qits-work-ref-link:hover,
-    .qits-work-ref-link:focus-visible {
-      text-decoration: underline;
-    }
-    .qits-work-ref-time {
-      font-size: 12px;
-      color: #6b7280;
-    }
-    .qits-work-ref-title {
-      display: block;
-      font-weight: 600;
-      overflow-wrap: anywhere;
-    }
-  `,
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: inline;
+      }
+      .qits-work-ref {
+        text-decoration: underline dotted;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 2px;
+        cursor: help;
+        border-radius: 2px;
+      }
+      .qits-work-ref:focus-visible {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 1px;
+      }
+      .qits-work-ref-panel {
+        display: none;
+        position: fixed;
+        inset: auto;
+        top: 0;
+        left: 0;
+        z-index: 1000;
+        margin: 0;
+        border: 0;
+        background: transparent;
+        overflow: visible;
+        color: inherit;
+        /* The transparent strip between the id and the box: the pointer crosses it onto the panel. */
+        padding: 4px 0 0;
+        width: max-content;
+        height: auto;
+      }
+      .qits-work-ref-panel.qits-work-ref-above {
+        padding: 0 0 4px;
+      }
+      .qits-work-ref-panel-open {
+        display: block;
+      }
+      .qits-work-ref-box {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        box-sizing: border-box;
+        max-width: min(360px, calc(100vw - 16px));
+        padding: 8px 10px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-line);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px var(--color-shadow);
+        color: var(--color-fg);
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 400;
+        font-style: normal;
+        line-height: 1.4;
+        text-align: left;
+        text-decoration: none;
+        white-space: normal;
+        cursor: auto;
+      }
+      .qits-work-ref-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+      }
+      .qits-work-ref-link {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        color: var(--color-accent);
+        text-decoration: none;
+      }
+      .qits-work-ref-link:hover,
+      .qits-work-ref-link:focus-visible {
+        text-decoration: underline;
+      }
+      .qits-work-ref-time {
+        font-size: 12px;
+        color: var(--color-fg-muted);
+      }
+      .qits-work-ref-title {
+        display: block;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+      }
+    `,
+  ],
 })
 export class QitsWorkRef {
   /** The item's project: a slug or an id, as the briefs door takes it — a slug for a link. */

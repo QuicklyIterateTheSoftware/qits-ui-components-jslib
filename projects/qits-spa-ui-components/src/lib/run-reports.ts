@@ -23,6 +23,7 @@ import {
   type QitsReportSummary,
   type QitsRunReportsDto,
 } from './reports';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /** One report's section: its summary, the registration that draws it (if any), and its title. */
 interface Section {
@@ -140,52 +141,55 @@ export function qitsReportKindFor(
       }
     }
   `,
-  styles: `
-    :host {
-      display: block;
-    }
-    p {
-      margin: 0.25rem 0;
-    }
-    .muted {
-      color: #6b7280;
-      font-size: 0.85rem;
-    }
-    .all {
-      margin-bottom: 0.5rem;
-    }
-    .report {
-      border-top: 1px solid #e5e7eb;
-      padding: 0.25rem 0;
-    }
-    h3 {
-      margin: 0;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: #111827;
-    }
-    h3.unregistered {
-      padding: 0.25rem 0;
-    }
-    .toggle {
-      font: inherit;
-      color: inherit;
-      background: none;
-      border: 0;
-      padding: 0.25rem 0;
-      cursor: pointer;
-      display: inline-flex;
-      gap: 0.4rem;
-      align-items: baseline;
-    }
-    .caret {
-      width: 1em;
-      color: #6b7280;
-    }
-    .body {
-      padding: 0.25rem 0 0.5rem 1.4rem;
-    }
-  `,
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+      }
+      p {
+        margin: 0.25rem 0;
+      }
+      .muted {
+        color: var(--color-fg-muted);
+        font-size: 0.85rem;
+      }
+      .all {
+        margin-bottom: 0.5rem;
+      }
+      .report {
+        border-top: 1px solid var(--color-line);
+        padding: 0.25rem 0;
+      }
+      h3 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--color-fg);
+      }
+      h3.unregistered {
+        padding: 0.25rem 0;
+      }
+      .toggle {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 0;
+        padding: 0.25rem 0;
+        cursor: pointer;
+        display: inline-flex;
+        gap: 0.4rem;
+        align-items: baseline;
+      }
+      .caret {
+        width: 1em;
+        color: var(--color-fg-muted);
+      }
+      .body {
+        padding: 0.25rem 0 0.5rem 1.4rem;
+      }
+    `,
+  ],
 })
 export class QitsRunReports {
   /** The qits-ci run whose reports are shown — a release request's QA run, or the run on screen. */

@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 
 import { clamp, formatElapsed, instantMs } from './duration';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /**
  * The width of a step boundary, as a percentage of the whole track. Small on purpose: it is a seam
@@ -162,55 +163,58 @@ interface QitsStepProgressBubble {
       }
     </span>
   `,
-  styles: `
-    :host {
-      display: block;
-      min-width: 0;
-    }
-    /* The bubbles and their seams add to exactly the track, so nothing has to be rounded away. */
-    .qits-step-progress-track {
-      display: flex;
-      align-items: flex-start;
-      width: 100%;
-      min-width: 0;
-    }
-    .qits-step-progress-step {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      flex: none;
-      min-width: 0;
-    }
-    /* Unfilled is the panel's border grey: this is a measure, not a control. */
-    .qits-step-progress-bubble {
-      display: block;
-      height: 4px;
-      background: #e5e7eb;
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    .qits-step-progress-fill {
-      display: block;
-      height: 100%;
-      background: #1d4ed8;
-      border-radius: 2px;
-    }
-    /* Past its own expectation and still going. A quieter tone rather than an alarming one: a slow
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+        min-width: 0;
+      }
+      /* The bubbles and their seams add to exactly the track, so nothing has to be rounded away. */
+      .qits-step-progress-track {
+        display: flex;
+        align-items: flex-start;
+        width: 100%;
+        min-width: 0;
+      }
+      .qits-step-progress-step {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        flex: none;
+        min-width: 0;
+      }
+      /* Unfilled is the panel's border grey: this is a measure, not a control. */
+      .qits-step-progress-bubble {
+        display: block;
+        height: 4px;
+        background: var(--color-line);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .qits-step-progress-fill {
+        display: block;
+        height: 100%;
+        background: var(--color-accent);
+        border-radius: 2px;
+      }
+      /* Past its own expectation and still going. A quieter tone rather than an alarming one: a slow
        step is not a failing one, and the bubble being full is already the loud part. */
-    .qits-step-progress-overdue {
-      background: #93a3c8;
-    }
-    .qits-step-progress-label {
-      display: block;
-      font-size: 11px;
-      line-height: 1.3;
-      font-variant-numeric: tabular-nums;
-      color: #6b7280;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  `,
+      .qits-step-progress-overdue {
+        background: var(--color-accent-muted);
+      }
+      .qits-step-progress-label {
+        display: block;
+        font-size: 11px;
+        line-height: 1.3;
+        font-variant-numeric: tabular-nums;
+        color: var(--color-fg-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    `,
+  ],
 })
 export class QitsStepProgress {
   /**

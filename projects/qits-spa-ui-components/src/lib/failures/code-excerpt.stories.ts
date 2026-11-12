@@ -72,14 +72,3 @@ export const Plain: Story = {
     language: 'kotlin',
   },
 };
-
-/** The same Java on a page that declares `color-scheme: dark`: the dark set of token colours. */
-export const Dark: Story = {
-  name: 'Java, dark',
-  decorators: [
-    (story) => ({
-      ...story(),
-      styles: [':host { display: block; color-scheme: dark; background: #030712; padding: 1rem; }'],
-    }),
-  ],
-};

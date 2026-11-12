@@ -28,6 +28,7 @@ import { QITS_PROJECTS } from './projects';
 import { QITS_REPOSITORIES, type QitsRepository } from './repositories';
 import { QITS_CATEGORIES, QITS_SCOPE, scopeGroup, scopePath, type QitsScope } from './scope';
 import { QitsStepProgress, type QitsStepProgressStep } from './step-progress';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /** `/ci` and `/ci/` name the same application; comparing normalised paths keeps the match honest. */
 function toDirectoryPath(href: string): string {
@@ -464,421 +465,424 @@ interface QitsNavRow {
       </main>
     </div>
   `,
-  styles: `
-    :host {
-      display: block;
-      height: 100vh;
-      height: 100dvh;
-      color: #111827;
-    }
-    .qits-layout {
-      display: grid;
-      grid-template-columns: 1fr;
-      grid-template-rows: auto auto 1fr;
-      height: 100%;
-      min-height: 0;
-    }
-    .qits-layout-bar {
-      grid-column: 1;
-      grid-row: 1;
-      display: flex;
-      /* Top, not centre: with nothing picked the picker *is* its own list, so this row is as tall
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+        height: 100vh;
+        height: 100dvh;
+        color: var(--color-fg);
+      }
+      .qits-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr;
+        height: 100%;
+        min-height: 0;
+      }
+      .qits-layout-bar {
+        grid-column: 1;
+        grid-row: 1;
+        display: flex;
+        /* Top, not centre: with nothing picked the picker *is* its own list, so this row is as tall
          as the projects there are. Centring would hang the burger halfway down that list. */
-      align-items: flex-start;
-      gap: 10px;
-      padding: 10px 16px;
-      background: #f9fafb;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .qits-layout-brand {
-      display: inline-flex;
-      align-items: center;
-      min-height: 34px;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.01em;
-    }
-    .qits-layout-burger {
-      font: inherit;
-      font-size: 18px;
-      line-height: 1;
-      display: inline-flex;
-      align-items: center;
-      /* Matched to the picker's pill so the two line up on the first row of a bar that may be tall. */
-      min-height: 34px;
-      padding: 2px 8px;
-      background: transparent;
-      color: inherit;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .qits-layout-burger:hover {
-      background: #f3f4f6;
-    }
-    /* The picker takes the width the wordmark did not need, and caps its own height rather than the
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 16px;
+        background: var(--color-surface-subtle);
+        border-bottom: 1px solid var(--color-line);
+      }
+      .qits-layout-brand {
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+      .qits-layout-burger {
+        font: inherit;
+        font-size: 18px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        /* Matched to the picker's pill so the two line up on the first row of a bar that may be tall. */
+        min-height: 34px;
+        padding: 2px 8px;
+        background: transparent;
+        color: inherit;
+        border: 1px solid var(--color-line-strong);
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .qits-layout-burger:hover {
+        background: var(--color-surface-muted);
+      }
+      /* The picker takes the width the wordmark did not need, and caps its own height rather than the
        bar's: a platform with fifty projects must not push the navigation off the screen, and the
        bar is not the element that scrolls. */
-    .qits-layout-project {
-      flex: 1;
-      min-width: 0;
-      max-height: 60vh;
-      overflow-y: auto;
-    }
-    .qits-layout-project-note {
-      margin: 0;
-      padding: 8px 2px;
-      font-size: 13px;
-      color: #6b7280;
-    }
-    .qits-layout-project-error {
-      color: #b91c1c;
-    }
+      .qits-layout-project {
+        flex: 1;
+        min-width: 0;
+        max-height: 60vh;
+        overflow-y: auto;
+      }
+      .qits-layout-project-note {
+        margin: 0;
+        padding: 8px 2px;
+        font-size: 13px;
+        color: var(--color-fg-muted);
+      }
+      .qits-layout-project-error {
+        color: var(--color-danger);
+      }
 
-    /* The anchor the popover hangs from. It is the *button* the panel is positioned against, so the
+      /* The anchor the popover hangs from. It is the *button* the panel is positioned against, so the
        wrapper is only as wide as the bolt and never takes width from the picker beside it. */
-    .qits-layout-builds {
-      position: relative;
-      flex: none;
-    }
-    .qits-layout-builds-toggle {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      /* The burger's box, so the two sit on one line with the picker's pill in a bar that may be
+      .qits-layout-builds {
+        position: relative;
+        flex: none;
+      }
+      .qits-layout-builds-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        /* The burger's box, so the two sit on one line with the picker's pill in a bar that may be
          tall — this is the same row of the header, not a second one. */
-      min-height: 34px;
-      padding: 2px 8px;
-      background: transparent;
-      color: #6b7280;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .qits-layout-builds-toggle:hover {
-      background: #f3f4f6;
-      color: #111827;
-    }
-    .qits-layout-builds-toggle-open {
-      background: #e5e7eb;
-      color: #111827;
-    }
-    /* Grey-filled is an answer: we asked, and nothing is building. The fill is the button's own
+        min-height: 34px;
+        padding: 2px 8px;
+        background: transparent;
+        color: var(--color-fg-muted);
+        border: 1px solid var(--color-line-strong);
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .qits-layout-builds-toggle:hover {
+        background: var(--color-surface-muted);
+        color: var(--color-fg);
+      }
+      .qits-layout-builds-toggle-open {
+        background: var(--color-surface-active);
+        color: var(--color-fg);
+      }
+      /* Grey-filled is an answer: we asked, and nothing is building. The fill is the button's own
        colour, so at rest it is the quiet grey of the chrome and it darkens under the pointer with
        everything else in the bar. overflow: visible is for the hollow state below — the path
        touches every edge of its own viewBox, so a stroke on it would be clipped in half. */
-    .qits-layout-bolt {
-      width: 11px;
-      height: 15px;
-      fill: currentColor;
-      overflow: visible;
-    }
-    /* Something is building. The bolt takes a colour of its OWN rather than the button taking a
+      .qits-layout-bolt {
+        width: 11px;
+        height: 15px;
+        fill: currentColor;
+        overflow: visible;
+      }
+      /* Something is building. The bolt takes a colour of its OWN rather than the button taking a
        fourth one: hovering a busy bolt would otherwise repaint it in the hover colour and quietly
-       un-say the thing it exists to say. Amber, beside the panel's own #b91c1c for an error and
-       #1d4ed8 for a run under way — a state, not an alarm. */
-    .qits-layout-bolt-busy {
-      fill: #d97706;
-    }
-    /* The read failed, so this bolt knows nothing — and a grey-filled bolt would be a confident
+       un-say the thing it exists to say. Amber, beside the panel's own danger for an error and
+       accent for a run under way — a state, not an alarm. */
+      .qits-layout-bolt-busy {
+        fill: var(--color-warning-fill);
+      }
+      /* The read failed, so this bolt knows nothing — and a grey-filled bolt would be a confident
        "nothing is building", which is the one thing it must not say. Hollowed out and quieter: the
        shape is still a bolt, and it is visibly not an answer. The aria-label says it in words,
        since neither a fill nor an outline reaches a screen reader. */
-    .qits-layout-bolt-unknown {
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 1.25;
-      stroke-linejoin: round;
-      opacity: 0.55;
-    }
+      .qits-layout-bolt-unknown {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.25;
+        stroke-linejoin: round;
+        opacity: 0.55;
+      }
 
-    /* The queue, counted on the bolt itself. Bottom-left because the panel hangs off the bottom
+      /* The queue, counted on the bolt itself. Bottom-left because the panel hangs off the bottom
        edge and the picker is to the left, so this corner is the one nothing else is using — and
        the wrapper is already position: relative, so the dot needs no structure of its own.
        Click-through: the whole box is the toggle, and a badge that swallowed a corner of it would
        be a dead spot in the middle of a control. */
-    .qits-layout-builds-count {
-      position: absolute;
-      left: -5px;
-      bottom: -4px;
-      z-index: 1;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
-      min-width: 15px;
-      height: 15px;
-      padding: 0 3px;
-      background: #b91c1c;
-      color: #ffffff;
-      border: 1px solid #ffffff;
-      border-radius: 999px;
-      font-size: 10px;
-      font-weight: 600;
-      line-height: 1;
-      font-variant-numeric: tabular-nums;
-      pointer-events: none;
-    }
+      .qits-layout-builds-count {
+        position: absolute;
+        left: -5px;
+        bottom: -4px;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        min-width: 15px;
+        height: 15px;
+        padding: 0 3px;
+        background: var(--color-danger);
+        color: var(--color-fg-on-accent);
+        border: 1px solid var(--color-surface);
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        pointer-events: none;
+      }
 
-    /* A panel over the page, not a column in the bar: the bar is 240px wide from the breakpoint up,
+      /* A panel over the page, not a column in the bar: the bar is 240px wide from the breakpoint up,
        and a list of builds is wider than that. It overhangs the content, which is what a popover is
        for, and it is anchored to the button's right edge so it never leaves the viewport. */
-    .qits-layout-builds-panel {
-      position: absolute;
-      top: calc(100% + 6px);
-      right: 0;
-      z-index: 20;
-      width: max-content;
-      min-width: 220px;
-      max-width: min(340px, 88vw);
-      max-height: 60vh;
-      overflow-y: auto;
-      padding: 4px;
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      box-shadow: 0 8px 24px rgb(17 24 39 / 12%);
-    }
-    .qits-layout-builds-note {
-      margin: 0;
-      padding: 6px 8px;
-      font-size: 13px;
-      color: #6b7280;
-    }
-    .qits-layout-builds-error {
-      color: #b91c1c;
-    }
-    .qits-layout-builds-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    /* Two lines' worth of facts on one row: what is being built and how far it has got above, where
+      .qits-layout-builds-panel {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        z-index: 20;
+        width: max-content;
+        min-width: 220px;
+        max-width: min(340px, 88vw);
+        max-height: 60vh;
+        overflow-y: auto;
+        padding: 4px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-line);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px var(--color-shadow);
+      }
+      .qits-layout-builds-note {
+        margin: 0;
+        padding: 6px 8px;
+        font-size: 13px;
+        color: var(--color-fg-muted);
+      }
+      .qits-layout-builds-error {
+        color: var(--color-danger);
+      }
+      .qits-layout-builds-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      /* Two lines' worth of facts on one row: what is being built and how far it has got above, where
        from and by which pipeline below, quieter — and under both, where the run has got to.
 
        The row is an anchor, so it says out loud that it is text and not a decorated link: the
        colours are the ones each cell already carried, and the underline would cut across four of
        them. Hover and focus are keyed on [href], because a row the platform gave no address is
        drawn by exactly these rules minus the ones that promise a destination. */
-    .qits-layout-build {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 2px 8px;
-      padding: 6px 8px;
-      border-radius: 6px;
-      border-left: 2px solid transparent;
-      font-size: 13px;
-      color: inherit;
-      text-decoration: none;
-    }
-    .qits-layout-build[href]:hover {
-      background: #f3f4f6;
-    }
-    .qits-layout-build[href]:focus-visible {
-      outline: 2px solid #1d4ed8;
-      outline-offset: -2px;
-    }
-    /* A run under way is the one that will change while the panel is open, so it carries the rail
+      .qits-layout-build {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 2px 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border-left: 2px solid transparent;
+        font-size: 13px;
+        color: inherit;
+        text-decoration: none;
+      }
+      .qits-layout-build[href]:hover {
+        background: var(--color-surface-muted);
+      }
+      .qits-layout-build[href]:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: -2px;
+      }
+      /* A run under way is the one that will change while the panel is open, so it carries the rail
        as well as the badge's tone — colour alone would be the only thing telling the two apart. */
-    .qits-layout-build-running {
-      background: #f9fafb;
-      border-left-color: #1d4ed8;
-    }
-    .qits-layout-build-name {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-weight: 600;
-      color: #111827;
-    }
-    .qits-layout-build-branch,
-    .qits-layout-build-config {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-size: 12px;
-      color: #6b7280;
-    }
-    .qits-layout-build-config {
-      text-align: right;
-    }
+      .qits-layout-build-running {
+        background: var(--color-surface-subtle);
+        border-left-color: var(--color-accent);
+      }
+      .qits-layout-build-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 600;
+        color: var(--color-fg);
+      }
+      .qits-layout-build-branch,
+      .qits-layout-build-config {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+        color: var(--color-fg-muted);
+      }
+      .qits-layout-build-config {
+        text-align: right;
+      }
 
-    /* The shape of the run, across the whole row: the track is per step and says where the run has
+      /* The shape of the run, across the whole row: the track is per step and says where the run has
        got to, the number beside it is what the run as a whole has taken, so the two can be read
        against each other without either being the only statement. Full width because a bar as wide
        as one cell of a two-column grid would be a decoration rather than a measure. */
-    .qits-layout-build-duration {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      margin-top: 2px;
-    }
-    /* Everything inside the track — the bubbles, the seams, the per-step numbers — belongs to
+      .qits-layout-build-duration {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin-top: 2px;
+      }
+      /* Everything inside the track — the bubbles, the seams, the per-step numbers — belongs to
        QitsStepProgress and is styled there. All the layout says is how much room it gets. */
-    .qits-layout-build-track {
-      flex: 1;
-      min-width: 0;
-    }
-    .qits-layout-build-elapsed {
-      flex: none;
-      font-size: 12px;
-      font-variant-numeric: tabular-nums;
-      color: #6b7280;
-    }
+      .qits-layout-build-track {
+        flex: 1;
+        min-width: 0;
+      }
+      .qits-layout-build-elapsed {
+        flex: none;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        color: var(--color-fg-muted);
+      }
 
-    .qits-layout-nav {
-      grid-column: 1;
-      grid-row: 2;
-      display: none;
-      /* A grid item is min-height: auto, so it refuses to shrink below its content. Without this a
+      .qits-layout-nav {
+        grid-column: 1;
+        grid-row: 2;
+        display: none;
+        /* A grid item is min-height: auto, so it refuses to shrink below its content. Without this a
          tall sub-menu grows the grid row instead of scrolling here, and the sidebar — with the
          burger and the content beneath it — runs off the bottom of the viewport. */
-      min-height: 0;
-      overflow-y: auto;
-      background: #f9fafb;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .qits-layout-nav-open {
-      display: block;
-    }
-    .qits-layout-links {
-      list-style: none;
-      margin: 0;
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .qits-layout-link {
-      display: block;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 14px;
-      color: #374151;
-      text-decoration: none;
-    }
-    .qits-layout-link:hover {
-      background: #f3f4f6;
-      color: #111827;
-    }
-    .qits-layout-link-current {
-      background: #e5e7eb;
-      color: #111827;
-      font-weight: 600;
-    }
-    /* A child belongs to the row above it, so it is indented and quieter — not a second style of
+        min-height: 0;
+        overflow-y: auto;
+        background: var(--color-surface-subtle);
+        border-bottom: 1px solid var(--color-line);
+      }
+      .qits-layout-nav-open {
+        display: block;
+      }
+      .qits-layout-links {
+        list-style: none;
+        margin: 0;
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .qits-layout-link {
+        display: block;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 14px;
+        color: var(--color-fg-soft);
+        text-decoration: none;
+      }
+      .qits-layout-link:hover {
+        background: var(--color-surface-muted);
+        color: var(--color-fg);
+      }
+      .qits-layout-link-current {
+        background: var(--color-surface-active);
+        color: var(--color-fg);
+        font-weight: 600;
+      }
+      /* A child belongs to the row above it, so it is indented and quieter — not a second style of
        link. The rail is what makes a group of them read as one block. */
-    .qits-layout-link-child {
-      margin-left: 10px;
-      padding-left: 12px;
-      border-left: 2px solid #e5e7eb;
-      border-radius: 0 6px 6px 0;
-      font-size: 13px;
-    }
-    /* A heading is a label, not a target: small caps, no hover, and enough space above it that the
+      .qits-layout-link-child {
+        margin-left: 10px;
+        padding-left: 12px;
+        border-left: 2px solid var(--color-line);
+        border-radius: 0 6px 6px 0;
+        font-size: 13px;
+      }
+      /* A heading is a label, not a target: small caps, no hover, and enough space above it that the
        group below reads as belonging to it. */
-    .qits-layout-heading {
-      margin: 10px 0 2px;
-      padding: 0 10px;
-      color: #9ca3af;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .qits-layout-links > li:first-child .qits-layout-heading {
-      margin-top: 0;
-    }
-    .qits-layout-note {
-      margin: 0;
-      padding: 6px 10px;
-      font-size: 13px;
-      color: #6b7280;
-    }
-    .qits-layout-alert {
-      color: #b91c1c;
-    }
+      .qits-layout-heading {
+        margin: 10px 0 2px;
+        padding: 0 10px;
+        color: var(--color-fg-faint);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .qits-layout-links > li:first-child .qits-layout-heading {
+        margin-top: 0;
+      }
+      .qits-layout-note {
+        margin: 0;
+        padding: 6px 10px;
+        font-size: 13px;
+        color: var(--color-fg-muted);
+      }
+      .qits-layout-alert {
+        color: var(--color-danger);
+      }
 
-    /* A box, not a look. What goes in here is the application's, declared in the application's own
+      /* A box, not a look. What goes in here is the application's, declared in the application's own
        style scope, so the layout gives it room and nothing else. */
-    .qits-layout-submenu {
-      display: block;
-      min-width: 0;
-    }
-
-    .qits-layout-stranded {
-      margin: 0;
-      padding: 8px 18px 2px;
-      font-size: 13px;
-      color: #6b7280;
-    }
-    .qits-layout-escape {
-      display: block;
-      margin: 0 8px 8px;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 14px;
-      color: #374151;
-      text-decoration: none;
-    }
-    .qits-layout-escape:hover {
-      background: #f3f4f6;
-      color: #111827;
-    }
-
-    .qits-layout-content {
-      grid-column: 1;
-      grid-row: 3;
-      min-height: 0;
-      overflow-y: auto;
-      padding: 16px;
-    }
-
-    /* From here up the navigation is always there, as a column beside the content. */
-    @media (min-width: 768px) {
-      .qits-layout {
-        grid-template-columns: 240px 1fr;
-        grid-template-rows: auto 1fr;
+      .qits-layout-submenu {
+        display: block;
+        min-width: 0;
       }
-      .qits-layout-bar {
-        border-right: 1px solid #e5e7eb;
+
+      .qits-layout-stranded {
+        margin: 0;
+        padding: 8px 18px 2px;
+        font-size: 13px;
+        color: var(--color-fg-muted);
       }
-      /* The panel opens to the RIGHT here, and only here. Below this breakpoint the bar spans the
+      .qits-layout-escape {
+        display: block;
+        margin: 0 8px 8px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 14px;
+        color: var(--color-fg-soft);
+        text-decoration: none;
+      }
+      .qits-layout-escape:hover {
+        background: var(--color-surface-muted);
+        color: var(--color-fg);
+      }
+
+      .qits-layout-content {
+        grid-column: 1;
+        grid-row: 3;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 16px;
+      }
+
+      /* From here up the navigation is always there, as a column beside the content. */
+      @media (min-width: 768px) {
+        .qits-layout {
+          grid-template-columns: 240px 1fr;
+          grid-template-rows: auto 1fr;
+        }
+        .qits-layout-bar {
+          border-right: 1px solid var(--color-line);
+        }
+        /* The panel opens to the RIGHT here, and only here. Below this breakpoint the bar spans the
          viewport and the bolt sits at its right edge, so anchoring the panel's right edge grows it
          leftward across the bar and it stays on screen. From 768px the bar is the FIRST GRID
          COLUMN, 240px wide, so that same anchoring grows leftward out of a 240px box: up to 340px
          of panel hanging off the left edge of the window, unreachable and unscrollable. Anchoring
          to the bolt's left edge instead sends it across the content area, which is the widest
          thing on the page and the only direction with room. */
-      .qits-layout-builds-panel {
-        right: auto;
-        left: 0;
-      }
-      .qits-layout-burger {
-        display: none;
-      }
-      .qits-layout-nav {
-        grid-row: 2;
-        display: block;
-        /* Restated with the row: as a full-height column the sidebar is the item a tall sub-menu
+        .qits-layout-builds-panel {
+          right: auto;
+          left: 0;
+        }
+        .qits-layout-burger {
+          display: none;
+        }
+        .qits-layout-nav {
+          grid-row: 2;
+          display: block;
+          /* Restated with the row: as a full-height column the sidebar is the item a tall sub-menu
            would stretch, and min-height: auto would let it push the grid past the viewport. */
-        min-height: 0;
-        border-bottom: none;
-        border-right: 1px solid #e5e7eb;
+          min-height: 0;
+          border-bottom: none;
+          border-right: 1px solid var(--color-line);
+        }
+        .qits-layout-content {
+          grid-column: 2;
+          grid-row: 1 / span 2;
+        }
       }
-      .qits-layout-content {
-        grid-column: 2;
-        grid-row: 1 / span 2;
-      }
-    }
-  `,
+    `,
+  ],
 })
 export class QitsMainLayout {
   /** What the bar calls this platform. */

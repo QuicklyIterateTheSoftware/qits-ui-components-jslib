@@ -412,9 +412,9 @@ export const WithSubmenu: Story = {
       <qits-main-layout ${argsToTemplate(args)} />
       <ng-template qitsNavSubmenu>
         <ul style="list-style:none;margin:0;padding:0 8px 8px 22px;font-size:13px">
-          <li><a href="/getting-started/" style="color:#374151">Getting started</a></li>
-          <li><a href="/architecture/" style="color:#374151">Architecture</a></li>
-          <li><a href="/reference/" style="color:#374151">Reference</a></li>
+          <li><a href="/getting-started/" style="color: var(--color-fg-soft)">Getting started</a></li>
+          <li><a href="/architecture/" style="color: var(--color-fg-soft)">Architecture</a></li>
+          <li><a href="/reference/" style="color: var(--color-fg-soft)">Reference</a></li>
         </ul>
       </ng-template>
     `,

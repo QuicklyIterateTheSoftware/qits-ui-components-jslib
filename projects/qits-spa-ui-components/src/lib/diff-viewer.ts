@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /** One drawn diff line, classed by its first character — the whole of unified-diff rendering. */
 interface DiffLine {
@@ -47,62 +48,65 @@ interface DiffLine {
       </div>
     }
   `,
-  styles: `
-    :host {
-      display: block;
-      min-width: 0;
-    }
-    .empty,
-    .unrenderable {
-      margin: 0.5rem 0;
-      color: #6b7280;
-      font-size: 0.85rem;
-    }
-    .code {
-      overflow: auto;
-      max-height: 34rem;
-      border: 1px solid #e5e7eb;
-      border-radius: 0.35rem;
-      background: #ffffff;
-    }
-    .lines {
-      margin: 0;
-      padding: 0.35rem 0;
-      list-style: none;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.8rem;
-      line-height: 1.5;
-    }
-    .line {
-      padding: 0 0.5rem;
-    }
-    .text {
-      color: #111827;
-      white-space: pre;
-      tab-size: 2;
-    }
-    .line.add {
-      background: #ecfdf5;
-    }
-    .line.add .text {
-      color: #065f46;
-    }
-    .line.del {
-      background: #fef2f2;
-    }
-    .line.del .text {
-      color: #991b1b;
-    }
-    .line.hunk {
-      background: #eff6ff;
-    }
-    .line.hunk .text {
-      color: #1d4ed8;
-    }
-    .line.meta .text {
-      color: #9ca3af;
-    }
-  `,
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+        min-width: 0;
+      }
+      .empty,
+      .unrenderable {
+        margin: 0.5rem 0;
+        color: var(--color-fg-muted);
+        font-size: 0.85rem;
+      }
+      .code {
+        overflow: auto;
+        max-height: 34rem;
+        border: 1px solid var(--color-line);
+        border-radius: 0.35rem;
+        background: var(--color-surface);
+      }
+      .lines {
+        margin: 0;
+        padding: 0.35rem 0;
+        list-style: none;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.8rem;
+        line-height: 1.5;
+      }
+      .line {
+        padding: 0 0.5rem;
+      }
+      .text {
+        color: var(--color-fg);
+        white-space: pre;
+        tab-size: 2;
+      }
+      .line.add {
+        background: var(--color-success-soft);
+      }
+      .line.add .text {
+        color: var(--color-success-strong);
+      }
+      .line.del {
+        background: var(--color-danger-soft);
+      }
+      .line.del .text {
+        color: var(--color-danger-strong);
+      }
+      .line.hunk {
+        background: var(--color-accent-soft);
+      }
+      .line.hunk .text {
+        color: var(--color-accent);
+      }
+      .line.meta .text {
+        color: var(--color-fg-faint);
+      }
+    `,
+  ],
 })
 export class QitsDiffViewer {
   /** git's own unified-diff text. Empty is an answer — see the class javadoc. */

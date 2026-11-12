@@ -1,4 +1,5 @@
 import { booleanAttribute, ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /**
  * A titled surface to group related content. The header is rendered only when a `heading` is
@@ -29,45 +30,48 @@ import { booleanAttribute, ChangeDetectionStrategy, Component, input } from '@an
       </div>
     </section>
   `,
-  styles: `
-    :host {
-      display: block;
-    }
-    .qits-card {
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .qits-card-elevated {
-      border-color: transparent;
-      box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.12),
-        0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-    .qits-card-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px 16px;
-      border-bottom: 1px solid #f3f4f6;
-    }
-    .qits-card-title {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 600;
-      color: #111827;
-    }
-    .qits-card-subtitle {
-      margin: 2px 0 0;
-      font-size: 13px;
-      color: #6b7280;
-    }
-    .qits-card-body {
-      padding: 16px;
-    }
-  `,
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+      }
+      .qits-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-line);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .qits-card-elevated {
+        border-color: transparent;
+        box-shadow:
+          0 1px 3px var(--color-shadow-near),
+          0 4px 12px var(--color-shadow-far);
+      }
+      .qits-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--color-line-subtle);
+      }
+      .qits-card-title {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--color-fg);
+      }
+      .qits-card-subtitle {
+        margin: 2px 0 0;
+        font-size: 13px;
+        color: var(--color-fg-muted);
+      }
+      .qits-card-body {
+        padding: 16px;
+      }
+    `,
+  ],
 })
 export class QitsCard {
   readonly heading = input<string>('');

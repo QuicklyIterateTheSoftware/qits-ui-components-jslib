@@ -15,6 +15,7 @@ import { formatElapsed } from './duration';
 import { declaredInputs } from './failures/declared-inputs';
 import { QitsFailureInsightsArea } from './failures/failure-insights-area';
 import type { QitsReport, QitsReportContext } from './reports';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /** The `test-results` kind's wire name. */
 export const QITS_TEST_RESULTS_KIND = 'test-results';
@@ -214,74 +215,77 @@ function count(value: unknown): number {
       </p>
     }
   `,
-  styles: `
-    :host {
-      display: block;
-      font-size: 0.875rem;
-      color: #111827;
-    }
-    p {
-      margin: 0.25rem 0;
-    }
-    .muted {
-      color: #6b7280;
-    }
-    .bad {
-      color: #b91c1c;
-      font-weight: 600;
-    }
-    .suites {
-      margin: 0.25rem 0 0.5rem;
-      padding-left: 1.25rem;
-      color: #374151;
-    }
-    .failures {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 0.5rem;
-    }
-    th,
-    td {
-      text-align: left;
-      vertical-align: top;
-      padding: 0.3rem 0.5rem;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    th {
-      font-weight: 600;
-      color: #374151;
-    }
-    .code,
-    pre {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.8rem;
-      overflow-wrap: anywhere;
-    }
-    .shape {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #b91c1c;
-    }
-    .message {
-      font: inherit;
-      text-align: left;
-      color: #1d4ed8;
-      background: none;
-      border: 0;
-      padding: 0;
-      cursor: pointer;
-    }
-    pre {
-      margin: 0.25rem 0;
-      padding: 0.5rem;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 0.25rem;
-      white-space: pre-wrap;
-      max-height: 24rem;
-      overflow: auto;
-    }
-  `,
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+        font-size: 0.875rem;
+        color: var(--color-fg);
+      }
+      p {
+        margin: 0.25rem 0;
+      }
+      .muted {
+        color: var(--color-fg-muted);
+      }
+      .bad {
+        color: var(--color-danger);
+        font-weight: 600;
+      }
+      .suites {
+        margin: 0.25rem 0 0.5rem;
+        padding-left: 1.25rem;
+        color: var(--color-fg-soft);
+      }
+      .failures {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.5rem;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 0.3rem 0.5rem;
+        border-bottom: 1px solid var(--color-line);
+      }
+      th {
+        font-weight: 600;
+        color: var(--color-fg-soft);
+      }
+      .code,
+      pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.8rem;
+        overflow-wrap: anywhere;
+      }
+      .shape {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-danger);
+      }
+      .message {
+        font: inherit;
+        text-align: left;
+        color: var(--color-accent);
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+      }
+      pre {
+        margin: 0.25rem 0;
+        padding: 0.5rem;
+        background: var(--color-surface-subtle);
+        border: 1px solid var(--color-line);
+        border-radius: 0.25rem;
+        white-space: pre-wrap;
+        max-height: 24rem;
+        overflow: auto;
+      }
+    `,
+  ],
 })
 export class QitsTestResultsReport {
   /** The `test-results` report, payload included. */

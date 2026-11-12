@@ -27,6 +27,7 @@ import {
   type QitsScreenshotEntry,
   type QitsScreenshotStatus,
 } from './screenshots-report.model';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /** How an open CHANGED screenshot is compared. */
 export type QitsScreenshotCompareMode = 'side' | 'diff' | 'onion';
@@ -382,210 +383,213 @@ export class QitsScreenshotPaint {
       <p class="muted unreadable">This screenshots report could not be read.</p>
     }
   `,
-  styles: `
-    :host {
-      display: block;
-      font-size: 0.875rem;
-      color: #111827;
-    }
-    p {
-      margin: 0.25rem 0;
-    }
-    ul {
-      margin: 0.25rem 0;
-      padding-left: 0;
-      list-style: none;
-    }
-    .muted {
-      color: #6b7280;
-    }
-    .code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.8rem;
-      overflow-wrap: anywhere;
-    }
-    .totals {
-      font-weight: 600;
-    }
-    .renderer {
-      margin: 0.5rem 0;
-      padding: 0.5rem 0.75rem;
-      color: #92400e;
-      background: #fffbeb;
-      border: 1px solid #fde68a;
-      border-radius: 6px;
-    }
-    .renderer ul {
-      padding-left: 1rem;
-    }
-    .renderer-title {
-      font-weight: 600;
-    }
-    .group {
-      margin-top: 0.75rem;
-    }
-    .group + .group {
-      padding-top: 0.75rem;
-      border-top: 1px solid #e5e7eb;
-    }
-    .group-title {
-      margin: 0 0 0.25rem;
-      font-size: 0.875rem;
-      font-weight: 600;
-    }
-    .count {
-      display: inline-block;
-      min-width: 1.5em;
-      padding: 0 0.4em;
-      font-size: 0.75rem;
-      text-align: center;
-      color: #374151;
-      background: #f3f4f6;
-      border: 1px solid #e5e7eb;
-      border-radius: 999px;
-    }
-    .group[data-status='NEW'] .count,
-    .group[data-status='CHANGED'] .count {
-      color: #b45309;
-      background: #fffbeb;
-      border-color: #fde68a;
-    }
-    .group[data-status='REMOVED'] .count {
-      color: #b91c1c;
-      background: #fef2f2;
-      border-color: #fecaca;
-    }
-    .spec-group {
-      margin: 0.5rem 0 0;
-    }
-    .spec {
-      color: #374151;
-    }
-    .rows {
-      padding-left: 0.75rem;
-    }
-    .row {
-      margin: 0.15rem 0;
-    }
-    .row-toggle {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 0.5rem;
-      font: inherit;
-      text-align: left;
-      color: inherit;
-      background: none;
-      border: 0;
-      padding: 0.1rem 0;
-      cursor: pointer;
-    }
-    .row-toggle:hover .name {
-      color: #1d4ed8;
-    }
-    .caret {
-      display: inline-block;
-      width: 1ch;
-      color: #6b7280;
-    }
-    .move {
-      padding-left: 1.5rem;
-      font-size: 0.8rem;
-    }
-    .body {
-      margin: 0.25rem 0 0.75rem 1.5rem;
-    }
-    .modes {
-      display: inline-flex;
-      margin: 0.25rem 0;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    .mode {
-      font: inherit;
-      font-size: 0.8rem;
-      padding: 0.15rem 0.75rem;
-      color: #374151;
-      background: #fff;
-      border: 0;
-      cursor: pointer;
-    }
-    .mode + .mode {
-      border-left: 1px solid #d1d5db;
-    }
-    .mode.selected {
-      color: #fff;
-      background: #1d4ed8;
-    }
-    .mode:disabled {
-      color: #9ca3af;
-      cursor: not-allowed;
-    }
-    .show-last {
-      font: inherit;
-      color: #1d4ed8;
-      background: none;
-      border: 0;
-      padding: 0;
-      margin: 0.25rem 0;
-      cursor: pointer;
-    }
-    .pair {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-      gap: 0.75rem;
-      margin-top: 0.5rem;
-    }
-    .side {
-      margin: 0.5rem 0 0;
-      min-width: 0;
-    }
-    figcaption {
-      margin-bottom: 0.25rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #374151;
-    }
-    .shot {
-      display: block;
-      max-width: 100%;
-      height: auto;
-      border: 1px solid #e5e7eb;
-      background-color: #fff;
-      background-image:
-        linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
-        linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
-        linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
-      background-size: 16px 16px;
-      background-position:
-        0 0,
-        0 8px,
-        8px -8px,
-        -8px 0;
-    }
-    .onion {
-      display: grid;
-      justify-items: start;
-      margin-top: 0.5rem;
-    }
-    .onion > .shot {
-      grid-area: 1 / 1;
-    }
-    .onion > .over {
-      background: none;
-      border-color: transparent;
-    }
-    .opacity {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-top: 0.25rem;
-      font-size: 0.8rem;
-      color: #374151;
-    }
-  `,
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+        font-size: 0.875rem;
+        color: var(--color-fg);
+      }
+      p {
+        margin: 0.25rem 0;
+      }
+      ul {
+        margin: 0.25rem 0;
+        padding-left: 0;
+        list-style: none;
+      }
+      .muted {
+        color: var(--color-fg-muted);
+      }
+      .code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.8rem;
+        overflow-wrap: anywhere;
+      }
+      .totals {
+        font-weight: 600;
+      }
+      .renderer {
+        margin: 0.5rem 0;
+        padding: 0.5rem 0.75rem;
+        color: var(--color-warning-strong);
+        background: var(--color-warning-soft);
+        border: 1px solid var(--color-warning-line);
+        border-radius: 6px;
+      }
+      .renderer ul {
+        padding-left: 1rem;
+      }
+      .renderer-title {
+        font-weight: 600;
+      }
+      .group {
+        margin-top: 0.75rem;
+      }
+      .group + .group {
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--color-line);
+      }
+      .group-title {
+        margin: 0 0 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+      .count {
+        display: inline-block;
+        min-width: 1.5em;
+        padding: 0 0.4em;
+        font-size: 0.75rem;
+        text-align: center;
+        color: var(--color-fg-soft);
+        background: var(--color-surface-muted);
+        border: 1px solid var(--color-line);
+        border-radius: 999px;
+      }
+      .group[data-status='NEW'] .count,
+      .group[data-status='CHANGED'] .count {
+        color: var(--color-warning);
+        background: var(--color-warning-soft);
+        border-color: var(--color-warning-line);
+      }
+      .group[data-status='REMOVED'] .count {
+        color: var(--color-danger);
+        background: var(--color-danger-soft);
+        border-color: var(--color-danger-line);
+      }
+      .spec-group {
+        margin: 0.5rem 0 0;
+      }
+      .spec {
+        color: var(--color-fg-soft);
+      }
+      .rows {
+        padding-left: 0.75rem;
+      }
+      .row {
+        margin: 0.15rem 0;
+      }
+      .row-toggle {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.5rem;
+        font: inherit;
+        text-align: left;
+        color: inherit;
+        background: none;
+        border: 0;
+        padding: 0.1rem 0;
+        cursor: pointer;
+      }
+      .row-toggle:hover .name {
+        color: var(--color-accent);
+      }
+      .caret {
+        display: inline-block;
+        width: 1ch;
+        color: var(--color-fg-muted);
+      }
+      .move {
+        padding-left: 1.5rem;
+        font-size: 0.8rem;
+      }
+      .body {
+        margin: 0.25rem 0 0.75rem 1.5rem;
+      }
+      .modes {
+        display: inline-flex;
+        margin: 0.25rem 0;
+        border: 1px solid var(--color-line-strong);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .mode {
+        font: inherit;
+        font-size: 0.8rem;
+        padding: 0.15rem 0.75rem;
+        color: var(--color-fg-soft);
+        background: var(--color-surface);
+        border: 0;
+        cursor: pointer;
+      }
+      .mode + .mode {
+        border-left: 1px solid var(--color-line-strong);
+      }
+      .mode.selected {
+        color: var(--color-fg-on-accent);
+        background: var(--color-accent);
+      }
+      .mode:disabled {
+        color: var(--color-fg-faint);
+        cursor: not-allowed;
+      }
+      .show-last {
+        font: inherit;
+        color: var(--color-accent);
+        background: none;
+        border: 0;
+        padding: 0;
+        margin: 0.25rem 0;
+        cursor: pointer;
+      }
+      .pair {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+      }
+      .side {
+        margin: 0.5rem 0 0;
+        min-width: 0;
+      }
+      figcaption {
+        margin-bottom: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-fg-soft);
+      }
+      .shot {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        border: 1px solid var(--color-line);
+        background-color: var(--color-surface);
+        background-image:
+          linear-gradient(45deg, var(--color-line) 25%, transparent 25%),
+          linear-gradient(-45deg, var(--color-line) 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, var(--color-line) 75%),
+          linear-gradient(-45deg, transparent 75%, var(--color-line) 75%);
+        background-size: 16px 16px;
+        background-position:
+          0 0,
+          0 8px,
+          8px -8px,
+          -8px 0;
+      }
+      .onion {
+        display: grid;
+        justify-items: start;
+        margin-top: 0.5rem;
+      }
+      .onion > .shot {
+        grid-area: 1 / 1;
+      }
+      .onion > .over {
+        background: none;
+        border-color: transparent;
+      }
+      .opacity {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.25rem;
+        font-size: 0.8rem;
+        color: var(--color-fg-soft);
+      }
+    `,
+  ],
 })
 export class QitsScreenshotsReport {
   /** The `screenshots` report, payload included. */

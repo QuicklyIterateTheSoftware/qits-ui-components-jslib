@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 import type { QitsReport, QitsReportContext } from './reports';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /** The `coverage` kind's wire name. */
 export const QITS_COVERAGE_KIND = 'coverage';
@@ -135,44 +136,47 @@ export function qitsLineRanges(ranges: readonly (readonly number[])[] | null | u
       </p>
     }
   `,
-  styles: `
-    :host {
-      display: block;
-      font-size: 0.875rem;
-      color: #111827;
-    }
-    p {
-      margin: 0.25rem 0;
-    }
-    .muted,
-    .no-baseline {
-      color: #6b7280;
-    }
-    .delta {
-      margin-left: 0.5rem;
-      font-weight: 600;
-      color: #374151;
-    }
-    .delta.down {
-      color: #b91c1c;
-    }
-    .delta.up {
-      color: #047857;
-    }
-    .uncovered {
-      margin: 0.25rem 0;
-      padding-left: 1.25rem;
-    }
-    .code,
-    .ranges {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.8rem;
-      overflow-wrap: anywhere;
-    }
-    .ranges {
-      color: #b91c1c;
-    }
-  `,
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+        font-size: 0.875rem;
+        color: var(--color-fg);
+      }
+      p {
+        margin: 0.25rem 0;
+      }
+      .muted,
+      .no-baseline {
+        color: var(--color-fg-muted);
+      }
+      .delta {
+        margin-left: 0.5rem;
+        font-weight: 600;
+        color: var(--color-fg-soft);
+      }
+      .delta.down {
+        color: var(--color-danger);
+      }
+      .delta.up {
+        color: var(--color-success);
+      }
+      .uncovered {
+        margin: 0.25rem 0;
+        padding-left: 1.25rem;
+      }
+      .code,
+      .ranges {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.8rem;
+        overflow-wrap: anywhere;
+      }
+      .ranges {
+        color: var(--color-danger);
+      }
+    `,
+  ],
 })
 export class QitsCoverageReport {
   /** The `coverage` report, payload included. */

@@ -79,11 +79,11 @@ export const InACommitList: Story = {
   name: 'In a commit list',
   render: () => ({
     template: `
-      <ul style="list-style: none; margin: 0; padding: 0; width: 360px; font: 14px system-ui, sans-serif; color: #111827">
+      <ul style="list-style: none; margin: 0; padding: 0; width: 360px; font: 14px system-ui, sans-serif; color: var(--color-fg)">
         @for (row of rows; track row.sha) {
-          <li style="border-bottom: 1px solid #f3f4f6">
+          <li style="border-bottom: 1px solid var(--color-line-subtle)">
             <a href="#commit" style="display: flex; gap: 8px; padding: 8px 4px; color: inherit; text-decoration: none">
-              <code style="color: #6b7280">{{ row.sha }}</code>
+              <code style="color: var(--color-fg-muted)">{{ row.sha }}</code>
               <span style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis">
                 <qits-commit-message [message]="row.subject" project="qits" />
               </span>

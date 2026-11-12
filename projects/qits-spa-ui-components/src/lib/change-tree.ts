@@ -8,6 +8,7 @@ import {
   type QitsChangeEntry,
   type QitsChangeRow,
 } from './change-tree-model';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /**
  * The files a change set touches, as a tree — a commit's changes, or a release request's fold.
@@ -124,138 +125,141 @@ import {
       }
     </ul>
   `,
-  styles: `
-    :host {
-      display: block;
-    }
-    .qits-change-tree {
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-    .qits-change-tree-row {
-      display: block;
-    }
-    .qits-change-tree-none {
-      padding: 0.35rem;
-      color: #6b7280;
-      font-size: 0.85rem;
-    }
-    .qits-change-tree-entry {
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-      width: 100%;
-      padding: 0.15rem 0.35rem;
-      border: 0;
-      border-radius: 0.25rem;
-      background: none;
-      color: #111827;
-      font: inherit;
-      font-size: 0.85rem;
-      text-align: left;
-      cursor: pointer;
-    }
-    .qits-change-tree-entry:hover {
-      background: #f3f4f6;
-    }
-    /* A submodule row: the chevron and the label are separate controls, drawn as one line. */
-    .qits-change-tree-entry-split {
-      padding: 0;
-      gap: 0;
-      cursor: default;
-    }
-    .qits-change-tree-entry-split:hover {
-      background: none;
-    }
-    .qits-change-tree-twisty,
-    .qits-change-tree-label {
-      display: flex;
-      align-items: center;
-      padding: 0.15rem 0.35rem;
-      border: 0;
-      background: none;
-      color: inherit;
-      font: inherit;
-      font-size: 0.85rem;
-      text-align: left;
-      cursor: pointer;
-    }
-    .qits-change-tree-twisty {
-      flex: 0 0 auto;
-      border-radius: 0.25rem 0 0 0.25rem;
-      padding-right: 0.15rem;
-    }
-    .qits-change-tree-label {
-      flex: 1 1 auto;
-      gap: 0.3rem;
-      min-width: 0;
-      border-radius: 0 0.25rem 0.25rem 0;
-      padding-left: 0.15rem;
-    }
-    .qits-change-tree-twisty:hover,
-    .qits-change-tree-label:hover {
-      background: #f3f4f6;
-    }
-    /* Highlighting sits on the row's one line, so a split submodule row lights up like a file. */
-    .qits-change-tree-selected > .qits-change-tree-entry {
-      background: #eff6ff;
-      color: #1d4ed8;
-      font-weight: 600;
-    }
-    /* A rotated bordered corner rather than a ▸ character: no font can fail to render a border. */
-    .qits-change-tree-chevron,
-    .qits-change-tree-gap {
-      flex: 0 0 auto;
-      width: 0.7rem;
-      height: 0.7rem;
-    }
-    .qits-change-tree-chevron::before {
-      content: '';
-      display: block;
-      width: 0.34rem;
-      height: 0.34rem;
-      margin: 0.16rem 0 0 0.1rem;
-      border-right: 1.5px solid currentColor;
-      border-bottom: 1.5px solid currentColor;
-      transform: rotate(-45deg);
-      transition: transform 120ms ease;
-    }
-    .qits-change-tree-chevron-open::before {
-      transform: rotate(45deg);
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .qits-change-tree-chevron::before {
-        transition: none;
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
       }
-    }
-    .qits-change-tree-name {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .qits-change-tree-mark {
-      flex: 0 0 auto;
-      margin-left: auto;
-      width: 1rem;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-align: center;
-    }
-    .qits-change-tree-mark-info {
-      color: #1d4ed8;
-    }
-    .qits-change-tree-mark-success {
-      color: #047857;
-    }
-    .qits-change-tree-mark-warning {
-      color: #b45309;
-    }
-    .qits-change-tree-mark-danger {
-      color: #b91c1c;
-    }
-  `,
+      .qits-change-tree {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .qits-change-tree-row {
+        display: block;
+      }
+      .qits-change-tree-none {
+        padding: 0.35rem;
+        color: var(--color-fg-muted);
+        font-size: 0.85rem;
+      }
+      .qits-change-tree-entry {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        width: 100%;
+        padding: 0.15rem 0.35rem;
+        border: 0;
+        border-radius: 0.25rem;
+        background: none;
+        color: var(--color-fg);
+        font: inherit;
+        font-size: 0.85rem;
+        text-align: left;
+        cursor: pointer;
+      }
+      .qits-change-tree-entry:hover {
+        background: var(--color-surface-muted);
+      }
+      /* A submodule row: the chevron and the label are separate controls, drawn as one line. */
+      .qits-change-tree-entry-split {
+        padding: 0;
+        gap: 0;
+        cursor: default;
+      }
+      .qits-change-tree-entry-split:hover {
+        background: none;
+      }
+      .qits-change-tree-twisty,
+      .qits-change-tree-label {
+        display: flex;
+        align-items: center;
+        padding: 0.15rem 0.35rem;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        font-size: 0.85rem;
+        text-align: left;
+        cursor: pointer;
+      }
+      .qits-change-tree-twisty {
+        flex: 0 0 auto;
+        border-radius: 0.25rem 0 0 0.25rem;
+        padding-right: 0.15rem;
+      }
+      .qits-change-tree-label {
+        flex: 1 1 auto;
+        gap: 0.3rem;
+        min-width: 0;
+        border-radius: 0 0.25rem 0.25rem 0;
+        padding-left: 0.15rem;
+      }
+      .qits-change-tree-twisty:hover,
+      .qits-change-tree-label:hover {
+        background: var(--color-surface-muted);
+      }
+      /* Highlighting sits on the row's one line, so a split submodule row lights up like a file. */
+      .qits-change-tree-selected > .qits-change-tree-entry {
+        background: var(--color-accent-soft);
+        color: var(--color-accent);
+        font-weight: 600;
+      }
+      /* A rotated bordered corner rather than a ▸ character: no font can fail to render a border. */
+      .qits-change-tree-chevron,
+      .qits-change-tree-gap {
+        flex: 0 0 auto;
+        width: 0.7rem;
+        height: 0.7rem;
+      }
+      .qits-change-tree-chevron::before {
+        content: '';
+        display: block;
+        width: 0.34rem;
+        height: 0.34rem;
+        margin: 0.16rem 0 0 0.1rem;
+        border-right: 1.5px solid currentColor;
+        border-bottom: 1.5px solid currentColor;
+        transform: rotate(-45deg);
+        transition: transform 120ms ease;
+      }
+      .qits-change-tree-chevron-open::before {
+        transform: rotate(45deg);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .qits-change-tree-chevron::before {
+          transition: none;
+        }
+      }
+      .qits-change-tree-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .qits-change-tree-mark {
+        flex: 0 0 auto;
+        margin-left: auto;
+        width: 1rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-align: center;
+      }
+      .qits-change-tree-mark-info {
+        color: var(--color-accent);
+      }
+      .qits-change-tree-mark-success {
+        color: var(--color-success);
+      }
+      .qits-change-tree-mark-warning {
+        color: var(--color-warning);
+      }
+      .qits-change-tree-mark-danger {
+        color: var(--color-danger);
+      }
+    `,
+  ],
 })
 export class QitsChangeTree {
   /** The changed files. Order does not matter: the model sorts directories first, then by name. */

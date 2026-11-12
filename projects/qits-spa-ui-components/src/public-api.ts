@@ -3,6 +3,7 @@ export type { QitsButtonSize, QitsButtonVariant } from './lib/button';
 export { QitsBadge } from './lib/badge';
 export type { QitsBadgeTone } from './lib/badge';
 export { QitsCard } from './lib/card';
+export { QITS_THEME_DEFAULTS } from './lib/theme-defaults';
 export { QitsPicker } from './lib/picker';
 export type { QitsPickerOption } from './lib/picker';
 export { QitsMainLayout } from './lib/main-layout';

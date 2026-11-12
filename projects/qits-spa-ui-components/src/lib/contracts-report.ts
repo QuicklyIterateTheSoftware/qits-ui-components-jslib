@@ -15,6 +15,7 @@ import {
 } from './contracts-report.types';
 import type { QitsReport, QitsReportContext, QitsReportKind } from './reports';
 import { QITS_SCOPE } from './scope';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /** One interaction as a section draws it: its identity, and its entry where a payload has it. */
 interface QitsContractLine {
@@ -310,85 +311,88 @@ const ROLE_TONE: Record<QitsContractRole, QitsBadgeTone> = {
       <p class="muted unreadable">This contracts report could not be read.</p>
     }
   `,
-  styles: `
-    :host {
-      display: block;
-      font-size: 0.875rem;
-      color: #111827;
-    }
-    p {
-      margin: 0.25rem 0;
-    }
-    h4 {
-      margin: 0.75rem 0 0.25rem;
-      font-size: 0.875rem;
-      font-weight: 600;
-    }
-    h5 {
-      margin: 0.5rem 0 0.25rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #374151;
-    }
-    ul {
-      margin: 0.25rem 0;
-      padding-left: 1.25rem;
-    }
-    li {
-      margin: 0.15rem 0;
-    }
-    .muted,
-    .removed {
-      color: #6b7280;
-    }
-    .warn {
-      color: #b45309;
-    }
-    .failed,
-    .failed-interaction .description {
-      color: #b91c1c;
-      font-weight: 600;
-    }
-    .group-head {
-      margin-top: 0.5rem;
-    }
-    .pair {
-      font-weight: 600;
-    }
-    .removed .pair {
-      font-weight: 400;
-    }
-    .code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.8rem;
-      overflow-wrap: anywhere;
-    }
-    .operations,
-    .count,
-    .failed,
-    .source {
-      margin-left: 0.5rem;
-    }
-    .states,
-    .operations {
-      color: #6b7280;
-    }
-    .toggle {
-      font: inherit;
-      text-align: left;
-      color: #1d4ed8;
-      background: none;
-      border: 0;
-      padding: 0;
-      cursor: pointer;
-    }
-    .inventory {
-      margin-top: 0.75rem;
-    }
-    a.source {
-      color: #1d4ed8;
-    }
-  `,
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+        font-size: 0.875rem;
+        color: var(--color-fg);
+      }
+      p {
+        margin: 0.25rem 0;
+      }
+      h4 {
+        margin: 0.75rem 0 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+      h5 {
+        margin: 0.5rem 0 0.25rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--color-fg-soft);
+      }
+      ul {
+        margin: 0.25rem 0;
+        padding-left: 1.25rem;
+      }
+      li {
+        margin: 0.15rem 0;
+      }
+      .muted,
+      .removed {
+        color: var(--color-fg-muted);
+      }
+      .warn {
+        color: var(--color-warning);
+      }
+      .failed,
+      .failed-interaction .description {
+        color: var(--color-danger);
+        font-weight: 600;
+      }
+      .group-head {
+        margin-top: 0.5rem;
+      }
+      .pair {
+        font-weight: 600;
+      }
+      .removed .pair {
+        font-weight: 400;
+      }
+      .code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.8rem;
+        overflow-wrap: anywhere;
+      }
+      .operations,
+      .count,
+      .failed,
+      .source {
+        margin-left: 0.5rem;
+      }
+      .states,
+      .operations {
+        color: var(--color-fg-muted);
+      }
+      .toggle {
+        font: inherit;
+        text-align: left;
+        color: var(--color-accent);
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+      }
+      .inventory {
+        margin-top: 0.75rem;
+      }
+      a.source {
+        color: var(--color-accent);
+      }
+    `,
+  ],
 })
 export class QitsContractsReport {
   /** The `contracts` report, payload included. */

@@ -12,6 +12,7 @@ import type {
   QitsReportContext,
   QitsReportKind,
 } from './reports';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /** The `entity-changes` kind's wire name. */
 export const QITS_ENTITY_CHANGES_KIND = 'entity-changes';
@@ -270,122 +271,125 @@ interface UnitRow {
       <p class="muted unreadable">This entity-changes report could not be read.</p>
     }
   `,
-  styles: `
-    :host {
-      display: block;
-      font-size: 0.875rem;
-      color: #111827;
-    }
-    p {
-      margin: 0.25rem 0;
-    }
-    ul {
-      margin: 0.25rem 0;
-      padding-left: 1.25rem;
-      list-style: none;
-    }
-    li {
-      margin: 0.15rem 0;
-    }
-    .muted {
-      color: #6b7280;
-    }
-    .unit + .unit {
-      margin-top: 1rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid #e5e7eb;
-    }
-    .unit-head {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 0.5rem;
-    }
-    .unit-name {
-      font-weight: 600;
-    }
-    .code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.8rem;
-      overflow-wrap: anywhere;
-    }
-    .tables,
-    .relations {
-      padding-left: 0;
-    }
-    .columns {
-      padding-left: 1.5rem;
-    }
-    .sign {
-      display: inline-block;
-      width: 1ch;
-      font-weight: 600;
-    }
-    .column-added .sign,
-    .relation-added .sign {
-      color: #047857;
-    }
-    .column-removed,
-    .relation-removed {
-      color: #b91c1c;
-    }
-    .column-changed .sign {
-      color: #b45309;
-    }
-    .table[data-status='REMOVED'] .table-name {
-      text-decoration: line-through;
-      color: #6b7280;
-    }
-    .toggle {
-      font: inherit;
-      text-align: left;
-      color: #1d4ed8;
-      background: none;
-      border: 0;
-      padding: 0;
-      margin: 0.25rem 0;
-      cursor: pointer;
-    }
-    .switch {
-      display: inline-flex;
-      margin: 0.5rem 0 0.25rem;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    .view {
-      font: inherit;
-      font-size: 0.8rem;
-      padding: 0.15rem 0.75rem;
-      color: #374151;
-      background: #fff;
-      border: 0;
-      cursor: pointer;
-    }
-    .view + .view {
-      border-left: 1px solid #d1d5db;
-    }
-    .view.selected {
-      color: #fff;
-      background: #1d4ed8;
-    }
-    .diagrams {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
-      gap: 0.75rem;
-      margin-top: 0.5rem;
-    }
-    .side {
-      margin: 0;
-      min-width: 0;
-    }
-    figcaption {
-      margin-bottom: 0.25rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #374151;
-    }
-  `,
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+        font-size: 0.875rem;
+        color: var(--color-fg);
+      }
+      p {
+        margin: 0.25rem 0;
+      }
+      ul {
+        margin: 0.25rem 0;
+        padding-left: 1.25rem;
+        list-style: none;
+      }
+      li {
+        margin: 0.15rem 0;
+      }
+      .muted {
+        color: var(--color-fg-muted);
+      }
+      .unit + .unit {
+        margin-top: 1rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--color-line);
+      }
+      .unit-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.5rem;
+      }
+      .unit-name {
+        font-weight: 600;
+      }
+      .code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.8rem;
+        overflow-wrap: anywhere;
+      }
+      .tables,
+      .relations {
+        padding-left: 0;
+      }
+      .columns {
+        padding-left: 1.5rem;
+      }
+      .sign {
+        display: inline-block;
+        width: 1ch;
+        font-weight: 600;
+      }
+      .column-added .sign,
+      .relation-added .sign {
+        color: var(--color-success);
+      }
+      .column-removed,
+      .relation-removed {
+        color: var(--color-danger);
+      }
+      .column-changed .sign {
+        color: var(--color-warning);
+      }
+      .table[data-status='REMOVED'] .table-name {
+        text-decoration: line-through;
+        color: var(--color-fg-muted);
+      }
+      .toggle {
+        font: inherit;
+        text-align: left;
+        color: var(--color-accent);
+        background: none;
+        border: 0;
+        padding: 0;
+        margin: 0.25rem 0;
+        cursor: pointer;
+      }
+      .switch {
+        display: inline-flex;
+        margin: 0.5rem 0 0.25rem;
+        border: 1px solid var(--color-line-strong);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .view {
+        font: inherit;
+        font-size: 0.8rem;
+        padding: 0.15rem 0.75rem;
+        color: var(--color-fg-soft);
+        background: var(--color-surface);
+        border: 0;
+        cursor: pointer;
+      }
+      .view + .view {
+        border-left: 1px solid var(--color-line-strong);
+      }
+      .view.selected {
+        color: var(--color-fg-on-accent);
+        background: var(--color-accent);
+      }
+      .diagrams {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+      }
+      .side {
+        margin: 0;
+        min-width: 0;
+      }
+      figcaption {
+        margin-bottom: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-fg-soft);
+      }
+    `,
+  ],
 })
 export class QitsEntityChangesReport {
   /** The `entity-changes` report, payload included. */

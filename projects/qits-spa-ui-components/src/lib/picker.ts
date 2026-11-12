@@ -11,6 +11,7 @@ import {
   model,
   signal,
 } from '@angular/core';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 /** One choice: the value the host cares about, and the words the reader sees. */
 export interface QitsPickerOption<T> {
@@ -118,146 +119,149 @@ let nextPickerId = 0;
       }
     }
   `,
-  styles: `
-    :host {
-      display: block;
-      color: #111827;
-    }
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+        color: var(--color-fg);
+      }
 
-    /* The one column the caret lives in, shared by the bar and every row — that shared width is
+      /* The one column the caret lives in, shared by the bar and every row — that shared width is
        what makes the caret read as moving rather than reappearing somewhere else. */
-    .qits-picker-rail {
-      flex: none;
-      width: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      align-self: stretch;
-    }
-    .qits-picker-caret {
-      width: 7px;
-      height: 9px;
-      fill: #1f2937;
-      opacity: 0.5;
-    }
-    .qits-picker-caret-locked {
-      opacity: 1;
-    }
-
-    .qits-picker-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      min-height: 36px;
-      padding-right: 6px;
-      font-size: 14px;
-      background: #ffffff;
-      border: 1px solid #d1d5db;
-      border-radius: 999px;
-    }
-    .qits-picker-bar .qits-picker-rail {
-      margin: 4px 0;
-      border-right: 1px solid #e5e7eb;
-    }
-    .qits-picker-disabled {
-      background: #f9fafb;
-      opacity: 0.6;
-    }
-    .qits-picker-value {
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      animation: qits-picker-pull-in 160ms ease-out;
-    }
-    .qits-picker-placeholder {
-      flex: 1;
-      min-width: 0;
-      color: #9ca3af;
-    }
-
-    /* The chosen row rising into the slot it was picked into. */
-    @keyframes qits-picker-pull-in {
-      from {
-        opacity: 0;
-        transform: translateY(9px);
+      .qits-picker-rail {
+        flex: none;
+        width: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        align-self: stretch;
       }
-      to {
+      .qits-picker-caret {
+        width: 7px;
+        height: 9px;
+        fill: var(--color-fg-control);
+        opacity: 0.5;
+      }
+      .qits-picker-caret-locked {
         opacity: 1;
-        transform: none;
       }
-    }
 
-    .qits-picker-clear {
-      flex: none;
-      display: inline-flex;
-      padding: 5px;
-      background: transparent;
-      border: none;
-      border-radius: 999px;
-      color: #6b7280;
-      cursor: pointer;
-    }
-    .qits-picker-clear:hover:not(:disabled) {
-      background: #f3f4f6;
-      color: #111827;
-    }
-    .qits-picker-clear:disabled {
-      cursor: not-allowed;
-    }
-    .qits-picker-clear svg {
-      width: 11px;
-      height: 11px;
-      stroke: currentColor;
-      stroke-width: 1.6;
-      stroke-linecap: round;
-    }
-
-    .qits-picker-list {
-      list-style: none;
-      margin: 6px 0 0;
-      padding: 2px 0;
-      border-radius: 8px;
-    }
-    .qits-picker-list:focus-visible {
-      outline: 2px solid #1f2937;
-      outline-offset: 2px;
-    }
-    .qits-picker-option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 5px 8px 5px 0;
-      font-size: 14px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .qits-picker-option-active {
-      background: #f3f4f6;
-    }
-    .qits-picker-label {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .qits-picker-disabled + .qits-picker-list .qits-picker-option {
-      cursor: not-allowed;
-    }
-    .qits-picker-empty {
-      margin: 6px 0 0;
-      padding: 5px 8px 5px 30px;
-      font-size: 14px;
-      color: #9ca3af;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
+      .qits-picker-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 36px;
+        padding-right: 6px;
+        font-size: 14px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-line-strong);
+        border-radius: 999px;
+      }
+      .qits-picker-bar .qits-picker-rail {
+        margin: 4px 0;
+        border-right: 1px solid var(--color-line);
+      }
+      .qits-picker-disabled {
+        background: var(--color-surface-subtle);
+        opacity: 0.6;
+      }
       .qits-picker-value {
-        animation: none;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        animation: qits-picker-pull-in 160ms ease-out;
       }
-    }
-  `,
+      .qits-picker-placeholder {
+        flex: 1;
+        min-width: 0;
+        color: var(--color-fg-faint);
+      }
+
+      /* The chosen row rising into the slot it was picked into. */
+      @keyframes qits-picker-pull-in {
+        from {
+          opacity: 0;
+          transform: translateY(9px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      .qits-picker-clear {
+        flex: none;
+        display: inline-flex;
+        padding: 5px;
+        background: transparent;
+        border: none;
+        border-radius: 999px;
+        color: var(--color-fg-muted);
+        cursor: pointer;
+      }
+      .qits-picker-clear:hover:not(:disabled) {
+        background: var(--color-surface-muted);
+        color: var(--color-fg);
+      }
+      .qits-picker-clear:disabled {
+        cursor: not-allowed;
+      }
+      .qits-picker-clear svg {
+        width: 11px;
+        height: 11px;
+        stroke: currentColor;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+      }
+
+      .qits-picker-list {
+        list-style: none;
+        margin: 6px 0 0;
+        padding: 2px 0;
+        border-radius: 8px;
+      }
+      .qits-picker-list:focus-visible {
+        outline: 2px solid var(--color-fg-control);
+        outline-offset: 2px;
+      }
+      .qits-picker-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 8px 5px 0;
+        font-size: 14px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .qits-picker-option-active {
+        background: var(--color-surface-muted);
+      }
+      .qits-picker-label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .qits-picker-disabled + .qits-picker-list .qits-picker-option {
+        cursor: not-allowed;
+      }
+      .qits-picker-empty {
+        margin: 6px 0 0;
+        padding: 5px 8px 5px 30px;
+        font-size: 14px;
+        color: var(--color-fg-faint);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .qits-picker-value {
+          animation: none;
+        }
+      }
+    `,
+  ],
 })
 export class QitsPicker<T> {
   /** Everything that can be picked, in the order it is shown. */

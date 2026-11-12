@@ -23,6 +23,7 @@ import {
   type QitsFailureActionProvider,
   type QitsFailureInsightProvider,
 } from './failure-insights';
+import { QITS_THEME_DEFAULTS } from '../theme-defaults';
 
 /**
  * Draws one insight's component beside itself, and survives the component throwing.
@@ -40,10 +41,14 @@ import {
       <p class="muted broken">{{ title() }} could not be shown.</p>
     }
   `,
+  // No QITS_THEME_DEFAULTS here, unlike every other coloured component: the slot only ever renders
+  // inside QitsFailureInsightsArea, whose styles register the tokens first. And two components of
+  // one file listing the same inline stylesheet leave an esbuild context of Angular's stylesheet
+  // bundler undisposed, so `ng test` passes and then never exits.
   styles: `
     .muted {
       margin: 0.25rem 0;
-      color: #6b7280;
+      color: var(--color-fg-muted);
     }
   `,
 })
@@ -149,48 +154,51 @@ interface InsightEntry {
       </div>
     }
   `,
-  styles: `
-    :host {
-      display: block;
-      min-width: 0;
-    }
-    .insights {
-      margin-top: 0.5rem;
-    }
-    .insight + .insight {
-      margin-top: 0.75rem;
-    }
-    .title {
-      margin: 0 0 0.25rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #374151;
-    }
-    .muted {
-      margin: 0.25rem 0;
-      color: #6b7280;
-    }
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-    }
-    .action {
-      font: inherit;
-      font-size: 0.8rem;
-      padding: 0.25rem 0.6rem;
-      color: #1d4ed8;
-      background: #ffffff;
-      border: 1px solid #bfdbfe;
-      border-radius: 0.3rem;
-      cursor: pointer;
-    }
-    .action:disabled {
-      cursor: progress;
-      opacity: 0.6;
-    }
-  `,
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+        min-width: 0;
+      }
+      .insights {
+        margin-top: 0.5rem;
+      }
+      .insight + .insight {
+        margin-top: 0.75rem;
+      }
+      .title {
+        margin: 0 0 0.25rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--color-fg-soft);
+      }
+      .muted {
+        margin: 0.25rem 0;
+        color: var(--color-fg-muted);
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+      }
+      .action {
+        font: inherit;
+        font-size: 0.8rem;
+        padding: 0.25rem 0.6rem;
+        color: var(--color-accent);
+        background: var(--color-surface);
+        border: 1px solid var(--color-accent-line);
+        border-radius: 0.3rem;
+        cursor: pointer;
+      }
+      .action:disabled {
+        cursor: progress;
+        opacity: 0.6;
+      }
+    `,
+  ],
 })
 export class QitsFailureInsightsArea {
   readonly failure = input.required<QitsTestFailure>();

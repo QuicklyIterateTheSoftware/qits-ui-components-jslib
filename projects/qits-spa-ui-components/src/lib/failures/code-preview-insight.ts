@@ -24,6 +24,7 @@ import { QitsCodeExcerpt } from './code-excerpt';
 import type { QitsFailureKind } from './failure-kinds';
 import type { QitsFailureInsightProvider } from './failure-insights';
 import { QitsSourceFiles, type QitsSourceFile } from './source-files';
+import { QITS_THEME_DEFAULTS } from '../theme-defaults';
 
 /** The most lines an excerpt draws; the rest is counted, not shown. */
 export const QITS_CODE_PREVIEW_MAX_LINES = 200;
@@ -86,22 +87,25 @@ type View =
       <a class="open" [href]="link">Open in githost at {{ sha7() }}</a>
     }
   `,
-  styles: `
-    :host {
-      display: block;
-      min-width: 0;
-    }
-    .muted {
-      margin: 0.25rem 0;
-      color: #6b7280;
-    }
-    .open {
-      display: inline-block;
-      margin-top: 0.25rem;
-      font-size: 0.8rem;
-      color: #1d4ed8;
-    }
-  `,
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: block;
+        min-width: 0;
+      }
+      .muted {
+        margin: 0.25rem 0;
+        color: var(--color-fg-muted);
+      }
+      .open {
+        display: inline-block;
+        margin-top: 0.25rem;
+        font-size: 0.8rem;
+        color: var(--color-accent);
+      }
+    `,
+  ],
 })
 export class QitsCodePreview {
   readonly failure = input.required<QitsTestFailure>();

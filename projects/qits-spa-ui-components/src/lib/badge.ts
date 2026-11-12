@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { QITS_THEME_DEFAULTS } from './theme-defaults';
 
 export type QitsBadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'highlight';
 
@@ -16,53 +17,56 @@ export type QitsBadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger
   selector: 'qits-badge',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <span [class]="classes()">{{ label() }}</span> `,
-  styles: `
-    :host {
-      display: inline-block;
-    }
-    .qits-badge {
-      display: inline-block;
-      font: inherit;
-      font-size: 12px;
-      line-height: 1.4;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      padding: 2px 8px;
-      border-radius: 999px;
-      border: 1px solid transparent;
-      white-space: nowrap;
-    }
-    .qits-badge-neutral {
-      background: #f3f4f6;
-      color: #374151;
-      border-color: #e5e7eb;
-    }
-    .qits-badge-info {
-      background: #eff6ff;
-      color: #1d4ed8;
-      border-color: #bfdbfe;
-    }
-    .qits-badge-success {
-      background: #ecfdf5;
-      color: #047857;
-      border-color: #a7f3d0;
-    }
-    .qits-badge-warning {
-      background: #fffbeb;
-      color: #b45309;
-      border-color: #fde68a;
-    }
-    .qits-badge-danger {
-      background: #fef2f2;
-      color: #b91c1c;
-      border-color: #fecaca;
-    }
-    .qits-badge-highlight {
-      background: #f5f3ff;
-      color: #6d28d9;
-      border-color: #ddd6fe;
-    }
-  `,
+  styles: [
+    QITS_THEME_DEFAULTS,
+    `
+      :host {
+        display: inline-block;
+      }
+      .qits-badge {
+        display: inline-block;
+        font: inherit;
+        font-size: 12px;
+        line-height: 1.4;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        white-space: nowrap;
+      }
+      .qits-badge-neutral {
+        background: var(--color-surface-muted);
+        color: var(--color-fg-soft);
+        border-color: var(--color-line);
+      }
+      .qits-badge-info {
+        background: var(--color-accent-soft);
+        color: var(--color-accent);
+        border-color: var(--color-accent-line);
+      }
+      .qits-badge-success {
+        background: var(--color-success-soft);
+        color: var(--color-success);
+        border-color: var(--color-success-line);
+      }
+      .qits-badge-warning {
+        background: var(--color-warning-soft);
+        color: var(--color-warning);
+        border-color: var(--color-warning-line);
+      }
+      .qits-badge-danger {
+        background: var(--color-danger-soft);
+        color: var(--color-danger);
+        border-color: var(--color-danger-line);
+      }
+      .qits-badge-highlight {
+        background: var(--color-special-soft);
+        color: var(--color-special);
+        border-color: var(--color-special-line);
+      }
+    `,
+  ],
 })
 export class QitsBadge {
   readonly label = input.required<string>();
