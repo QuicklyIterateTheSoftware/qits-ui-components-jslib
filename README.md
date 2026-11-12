@@ -33,6 +33,99 @@ opened the panel over it.
 | `QitsWorkRef`        | `<qits-work-ref>`        | A work item's qualified id; with a known brief a reference whose popover shows the id (linked), the status, the age and the title. `project`, required `qualifiedId`, optional `brief`.                                                                                                   |
 | `QitsWorkRefs`       | `[qitsWorkRefs]`         | The work ids in HTML rendered into the element (`[innerHTML]` markdown) drawn as `<qits-work-ref>`. `qitsWorkRefs` (the slug), `qitsWorkRefsHtml` (bind the same HTML, to re-link). `qitsLinkWorkIds` is the function under it.                                                           |
 
+## Theme
+
+`@qits/ui-components/theme.css` is the one look of every qits frontend: the palette, the semantic
+colour tokens with their light and dark values, and a `dark:` variant, as Tailwind v4 CSS. A
+Tailwind app imports it right after Tailwind:
+
+```css
+@import 'tailwindcss';
+@import '@qits/ui-components/theme.css';
+```
+
+and paints with the tokens as utilities — `bg-surface`, `text-fg-muted`, `border-line` — or as
+`var(--color-surface)` in its own styles. The file also points Tailwind at this package's compiled
+templates (`@source`), so a utility a component uses is generated in the app's build.
+
+**An app without Tailwind keeps today's light look and imports nothing.** Every component registers
+its tokens with `@property` (`QITS_THEME_DEFAULTS`), each at its light value, which is exactly the
+colour the component painted before it had tokens. The theme, where it is loaded, overrides those
+on `:root`.
+
+**Light or dark is decided by `data-theme` on `<html>`:**
+
+- absent — follow the OS (`prefers-color-scheme`);
+- `data-theme="light"` — light, whatever the OS says;
+- `data-theme="dark"` — dark, whatever the OS says.
+
+The `dark:` variant follows the same rule (Tailwind's own reads only the media query), and so does
+`--qits-color-scheme` on `:root`: `light` or `dark`, for code that needs the answer rather than the
+colours — `<qits-mermaid-diagram>` draws mermaid's `dark` theme exactly when it is `dark`, and
+`neutral` otherwise, so always `neutral` in an app without the theme. `color-scheme` is set with
+it, so native controls and scrollbars follow.
+
+**The token names are a contract.** Every frontend paints with them, so renaming or removing one is
+a breaking change for all of them. A frontend adds no colours of its own — no palette step, no
+literal, no app-local token; `@qits/angular`'s `qits/theme-colors` lint rule reports each. A colour
+a frontend needs and no token names is added **here**, with its light and dark value and a role,
+and released. In dark, `fg`, `fg-soft`, `fg-muted`, `accent`, `danger`, `warning` and `success`
+reach WCAG AA (4.5:1) on `surface`, `surface-subtle` and `surface-muted`; `theme.spec.ts` computes
+it from theme.css.
+
+A dark value named as a step (`charcoal-brown-950`) is that palette colour; the others are written
+out — the translucent shadows and tint, and the violet and pink that the palette lacks.
+
+| Token                   | Light                    | Dark                              | Role                                                                                  |
+| ----------------------- | ------------------------ | --------------------------------- | ------------------------------------------------------------------------------------- |
+| `surface`               | `#ffffff`                | `charcoal-brown-950`              | Page, card, panel, input and button backgrounds                                       |
+| `surface-subtle`        | `#f9fafb`                | `charcoal-brown-900`              | Code blocks, table heads, the layout bar and sidebar, a running build row             |
+| `surface-muted`         | `#f3f4f6`                | `charcoal-brown-800`              | Hover rows, the neutral badge, the secondary button                                   |
+| `surface-active`        | `#e5e7eb`                | `charcoal-brown-700`              | Pressed and current: the current nav link, an open toggle, a hovered secondary button |
+| `surface-inverse`       | `#1f2937`                | `charcoal-brown-100`              | The primary button: a fill in the opposite scheme                                     |
+| `surface-inverse-hover` | `#374151`                | `charcoal-brown-200`              | The primary button under the pointer                                                  |
+| `surface-tint`          | `rgba(31, 41, 55, 0.08)` | `oklch(96.36% 0.003 106.45 / 8%)` | A translucent wash over whatever is below: the ghost button under the pointer         |
+| `fg`                    | `#111827`                | `charcoal-brown-50`               | Body text, headings                                                                   |
+| `fg-soft`               | `#374151`                | `charcoal-brown-200`              | Secondary text, neutral badge text, table heads, captions of a figure                 |
+| `fg-muted`              | `#6b7280`                | `charcoal-brown-300`              | Captions, meta, notes, carets                                                         |
+| `fg-faint`              | `#9ca3af`                | `charcoal-brown-400`              | Placeholders, disabled text, section headings of the sidebar                          |
+| `fg-control`            | `#1f2937`                | `charcoal-brown-100`              | A control's own ink: the ghost button's text, the picker's caret and focus outline    |
+| `fg-on-accent`          | `#ffffff`                | `charcoal-brown-950`              | Text on an accent or danger fill                                                      |
+| `fg-on-inverse`         | `#f9fafb`                | `charcoal-brown-950`              | Text on surface-inverse                                                               |
+| `line`                  | `#e5e7eb`                | `charcoal-brown-800`              | Borders, dividers, an unfilled progress track                                         |
+| `line-subtle`           | `#f3f4f6`                | `charcoal-brown-900`              | The quietest divider: under a card header, between list rows                          |
+| `line-strong`           | `#d1d5db`                | `charcoal-brown-700`              | Input, button and segmented-switch borders                                            |
+| `accent`                | `#1d4ed8`                | `ocean-deep-300`                  | Links, the info tone, selection, a run under way, a filled progress step              |
+| `accent-soft`           | `#eff6ff`                | `ocean-deep-950`                  | Info badge and selected-row background, a diff hunk line                              |
+| `accent-line`           | `#bfdbfe`                | `ocean-deep-800`                  | Info badge border                                                                     |
+| `accent-muted`          | `#93a3c8`                | `ocean-deep-600`                  | A progress step past its expected duration: quieter than accent                       |
+| `focus-ring`            | `#3b82f6`                | `ocean-deep-400`                  | Focus outline                                                                         |
+| `danger`                | `#b91c1c`                | `cinnabar-300`                    | Failure text and marks, the danger tone, the queued-builds count                      |
+| `danger-soft`           | `#fef2f2`                | `cinnabar-950`                    | Danger badge background, a removed diff line                                          |
+| `danger-line`           | `#fecaca`                | `cinnabar-800`                    | Danger badge border                                                                   |
+| `danger-strong`         | `#991b1b`                | `cinnabar-200`                    | Text of a removed diff line, on danger-soft                                           |
+| `warning`               | `#b45309`                | `sunflower-gold-400`              | Warning text and marks, the warning tone                                              |
+| `warning-soft`          | `#fffbeb`                | `sunflower-gold-950`              | Warning badge and notice background                                                   |
+| `warning-line`          | `#fde68a`                | `sunflower-gold-800`              | Warning badge and notice border                                                       |
+| `warning-strong`        | `#92400e`                | `sunflower-gold-200`              | Text of a warning notice, on warning-soft                                             |
+| `warning-fill`          | `#d97706`                | `sunflower-gold-500`              | A shape filled with the warning colour: the busy builds bolt                          |
+| `success`               | `#047857`                | `mint-leaf-400`                   | Success text and marks, the success tone                                              |
+| `success-soft`          | `#ecfdf5`                | `mint-leaf-950`                   | Success badge background, an added diff line                                          |
+| `success-line`          | `#a7f3d0`                | `mint-leaf-800`                   | Success badge border                                                                  |
+| `success-strong`        | `#065f46`                | `mint-leaf-200`                   | Text of an added diff line, on success-soft                                           |
+| `special`               | `#6d28d9`                | `oklch(81.1% 0.111 293.571)`      | The highlight tone: a thing singled out as ready or planned                           |
+| `special-soft`          | `#f5f3ff`                | `oklch(28.3% 0.141 291.089)`      | Highlight badge background                                                            |
+| `special-line`          | `#ddd6fe`                | `oklch(43.2% 0.232 292.759)`      | Highlight badge border                                                                |
+| `code-keyword`          | `#7c3aed`                | `oklch(81.1% 0.111 293.571)`      | Code excerpts: keywords                                                               |
+| `code-string`           | `#047857`                | `mint-leaf-300`                   | Code excerpts: string literals                                                        |
+| `code-number`           | `#b45309`                | `sunflower-gold-300`              | Code excerpts: number literals                                                        |
+| `code-annotation`       | `#be185d`                | `oklch(82.3% 0.12 346.018)`       | Code excerpts: annotations and decorators                                             |
+| `code-type`             | `#1d4ed8`                | `ocean-deep-300`                  | Code excerpts: type names                                                             |
+| `code-punctuation`      | `#4b5563`                | `charcoal-brown-300`              | Code excerpts: punctuation                                                            |
+| `shadow`                | `rgb(17 24 39 / 12%)`    | `oklch(0% 0 0 / 50%)`             | Popover and panel shadows                                                             |
+| `shadow-near`           | `rgba(0, 0, 0, 0.12)`    | `oklch(0% 0 0 / 50%)`             | An elevated card's tight shadow                                                       |
+| `shadow-far`            | `rgba(0, 0, 0, 0.08)`    | `oklch(0% 0 0 / 35%)`             | An elevated card's wide shadow                                                        |
+
 ## Release reports
 
 A release request's QA run submits structured **reports** to qits-ci — `test-results`,
