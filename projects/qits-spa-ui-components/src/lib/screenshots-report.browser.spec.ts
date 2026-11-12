@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { mount } from '../testing/browser/mount';
+import { mount, WAIT_MS } from '../testing/browser/mount';
 import {
   EVERY_STATUS,
   NO_BASELINE,
@@ -48,6 +48,7 @@ async function painted(host: Element): Promise<void> {
         !!host.querySelector('.row [aria-expanded="true"]') &&
         host.querySelectorAll('.shot').length > 0 &&
         !host.querySelector('.loading, .stats-pending'),
+      { timeout: WAIT_MS },
     )
     .toBe(true);
   const images = [...host.querySelectorAll<HTMLImageElement>('img.shot')];

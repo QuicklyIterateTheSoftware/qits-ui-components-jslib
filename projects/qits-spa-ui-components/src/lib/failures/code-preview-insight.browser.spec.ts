@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { mount, showing } from '../../testing/browser/mount';
+import { mount, showing, WAIT_MS } from '../../testing/browser/mount';
 import { QitsCodePreview } from './code-preview-insight';
 import {
   locatedFailure,
@@ -23,7 +23,9 @@ function platform(answer: QitsSourceFile): void {
 
 /** Waits for the fake git host's answer to be drawn: an excerpt, or a sentence saying why not. */
 async function answered(host: Element): Promise<void> {
-  await expect.poll(() => !!host.querySelector('qits-code-excerpt, .degraded')).toBe(true);
+  await expect
+    .poll(() => !!host.querySelector('qits-code-excerpt, .degraded'), { timeout: WAIT_MS })
+    .toBe(true);
 }
 
 describe('QitsCodePreview (screenshots)', () => {

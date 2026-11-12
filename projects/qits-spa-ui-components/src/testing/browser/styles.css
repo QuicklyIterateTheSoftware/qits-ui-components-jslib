@@ -8,8 +8,15 @@
  * The no-theme spec (`theme-defaults.browser.spec.ts`) switches this whole sheet off to prove the
  * components' `@property` defaults alone.
  */
-@import 'tailwindcss';
+@import 'tailwindcss' source(none);
 @import '../../theme.css';
+
+/*
+ * Only the library's own sources, as an app's build reads the shipped templates (theme.css's
+ * `@source './fesm2022'`, which does not exist here): Tailwind's automatic detection would also scan
+ * the freezes the previous run wrote, so each run's CSS would depend on the last.
+ */
+@source '../../lib';
 
 @font-face {
   font-family: 'Inter Test';

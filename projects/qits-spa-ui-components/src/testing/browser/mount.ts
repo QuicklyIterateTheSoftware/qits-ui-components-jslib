@@ -3,6 +3,12 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { expect } from 'vitest';
 import { page, type Locator } from 'vitest/browser';
 
+/**
+ * How long the specs wait for something asynchronous to land (a fake answer, mermaid's first load):
+ * well over `expect.poll`'s 1 s default, which mermaid's first import alone can take.
+ */
+export const WAIT_MS = 10_000;
+
 /** A mounted component and the locator its screenshot is taken of. */
 export interface Mounted<T> {
   readonly fixture: ComponentFixture<T>;
@@ -39,7 +45,7 @@ export async function mount<T>(
 
 /** Waits until `host` shows `text` (Vitest's text locators are fixed when they are made). */
 export async function showing(host: Element, text: string): Promise<void> {
-  await expect.poll(() => host.textContent ?? '').toContain(text);
+  await expect.poll(() => host.textContent ?? '', { timeout: WAIT_MS }).toContain(text);
 }
 
 /**

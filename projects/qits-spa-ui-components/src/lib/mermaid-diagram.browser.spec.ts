@@ -1,8 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { diagramsDrawn } from '../testing/browser/mermaid';
+import { diagramsDrawn, SEEDED_MERMAID_LOADER } from '../testing/browser/mermaid';
 import { clearScheme, forceScheme, mount } from '../testing/browser/mount';
 import { CI_AFTER } from './fixtures/entity-changes/entity-changes-states';
-import { MERMAID_STORY_LOADER } from './fixtures/mermaid-story-loader';
 import { QitsMermaidDiagram } from './mermaid-diagram';
 
 /**
@@ -22,7 +21,7 @@ const REASON = 'mermaid redraws asynchronously on a scheme change; each scheme i
 
 describe('QitsMermaidDiagram (screenshots)', () => {
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [MERMAID_STORY_LOADER] });
+    TestBed.configureTestingModule({ providers: [SEEDED_MERMAID_LOADER] });
   });
 
   afterEach(() => {
