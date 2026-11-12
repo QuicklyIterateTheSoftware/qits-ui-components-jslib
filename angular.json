@@ -33,6 +33,26 @@
             "exclude": ["projects/qits-spa-ui-components/src/**/*.browser.spec.ts"]
           }
         },
+        "test-browser": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "buildTarget": "qits-spa-ui-components:test-browser-build",
+            "tsConfig": "projects/qits-spa-ui-components/tsconfig.spec.json",
+            "include": ["**/*.browser.spec.ts"],
+            "browsers": ["chromium"],
+            "headless": true,
+            "browserViewport": "800x3000",
+            "runnerConfig": "vitest-browser.config.ts",
+            "setupFiles": ["projects/qits-spa-ui-components/src/testing/browser/setup.ts"]
+          }
+        },
+        "test-browser-build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "tsConfig": "projects/qits-spa-ui-components/tsconfig.spec.json",
+            "styles": ["projects/qits-spa-ui-components/src/testing/browser/styles.css"]
+          }
+        },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {

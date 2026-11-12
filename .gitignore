@@ -38,7 +38,8 @@ yarn-error.log
 /libpeerconnection.log
 testem.log
 /typings
-__screenshots__/
+# Browser test output. The reference screenshots in __screenshots__/ are committed; a mismatch's
+# actual and diff images go here instead.
 .vitest-attachments/
 
 # System files

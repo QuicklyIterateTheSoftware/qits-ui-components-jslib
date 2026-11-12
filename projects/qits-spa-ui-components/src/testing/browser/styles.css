@@ -1,0 +1,44 @@
+/*
+ * The page the browser screenshot tests render on: the library's theme loaded the way a Tailwind
+ * app loads it (README, "Theme"), so the dark values' palette steps exist, plus a font from this
+ * repository (a system font differs between machines and would change every shot). The font's URL
+ * is absolute, from the repository root Vitest serves, so the build leaves it alone and a freeze
+ * can copy the file it names.
+ *
+ * The no-theme spec (`theme-defaults.browser.spec.ts`) switches this whole sheet off to prove the
+ * components' `@property` defaults alone.
+ */
+@import 'tailwindcss';
+@import '../../theme.css';
+
+@font-face {
+  font-family: 'Inter Test';
+  font-weight: 400;
+  src: url('/projects/qits-spa-ui-components/src/testing/browser/fonts/inter-latin-400-normal.woff2')
+    format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter Test';
+  font-weight: 600;
+  src: url('/projects/qits-spa-ui-components/src/testing/browser/fonts/inter-latin-600-normal.woff2')
+    format('woff2');
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-fg);
+  font-family: 'Inter Test', sans-serif;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  animation: none !important;
+  transition: none !important;
+  caret-color: transparent !important;
+}

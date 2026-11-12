@@ -5,8 +5,9 @@ const rootConfig = require('../../eslint.config.js');
 const qits = require('@qits/angular/eslint').default;
 
 module.exports = defineConfig([
-  // Recorded sources the highlighter specs read as text: inputs, not code of this library.
-  { ignores: ['**/src/**/fixtures/**'] },
+  // Recorded sources the highlighter specs read as text: inputs, not code of this library. And the
+  // screenshot freezes the browser specs write: rendered HTML, not templates.
+  { ignores: ['**/src/**/fixtures/**', '**/src/testing/browser/freezes/**'] },
   ...rootConfig,
   {
     files: ['**/*.ts'],
