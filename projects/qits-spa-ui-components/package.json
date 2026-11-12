@@ -16,5 +16,13 @@
     "mermaid": "^11.17.2",
     "tslib": "^2.3.0"
   },
-  "sideEffects": false
+  "exports": {
+    "./theme.css": {
+      "style": "./theme.css",
+      "default": "./theme.css"
+    }
+  },
+  "sideEffects": [
+    "*.css"
+  ]
 }

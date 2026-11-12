@@ -84,6 +84,28 @@ for (const subpath of ['.', './testing', './mermaid']) {
     }
   }
 }
+// The theme (ticket qits-2085) is a stylesheet, not an entry point: ng-packagr copies it to the
+// package root as an asset, and a Tailwind app reaches it as `@import '@qits/ui-components/theme.css'`
+// — which resolves through `style` (Tailwind, postcss-import) or `default` (everything else). The
+// walk above only proves a path that is there resolves; a dropped asset or a dropped export entry
+// would leave nothing for it to walk, and every app importing the theme would fail its build.
+if (!existsSync(resolve(DIST, 'theme.css'))) {
+  fail(`${DIST}/theme.css is missing: ng-package.json's assets no longer copy src/theme.css`);
+}
+for (const condition of ['style', 'default']) {
+  if (dist.exports?.['./theme.css']?.[condition] !== './theme.css') {
+    fail(
+      `exports["./theme.css"].${condition} is ${dist.exports?.['./theme.css']?.[condition]}, ` +
+        'not ./theme.css: an app could not import the theme',
+    );
+  }
+}
+// A CSS import from a script is a side effect a bundler must keep; `sideEffects: false` would let
+// it drop `import '@qits/ui-components/theme.css'` as unused.
+if (!Array.isArray(dist.sideEffects) || !dist.sideEffects.includes('*.css')) {
+  fail(`dist/package.json sideEffects is ${JSON.stringify(dist.sideEffects)}: it must keep *.css`);
+}
+
 if (!dist.exports?.['./package.json']) {
   fail(`exports["./package.json"] is missing: a consumer could not resolve this package's version`);
 }
@@ -116,5 +138,5 @@ if (typeof main === 'string' && existsSync(resolve(DIST, main))) {
 if (failed) process.exit(1);
 console.log(
   `publishable: ${dist.name}@${dist.version} in ${DIST} ` +
-    '(exports resolve, ./testing and ./mermaid built, not private, no mermaid in the main FESM)',
+    '(exports resolve, ./testing and ./mermaid built, theme.css shipped, not private, no mermaid in the main FESM)',
 );
