@@ -57,11 +57,11 @@ importers:
         specifier: 17.1.4
         version: 17.1.4
       '@qits/angular':
-        specifier: 2026.1112.191035
-        version: 2026.1112.191035(34f714eec35d44626ad04a0c6549402a)
+        specifier: 2026.1113.80440
+        version: 2026.1113.80440(34f714eec35d44626ad04a0c6549402a)
       '@qits/ci-golden-masters':
-        specifier: 2026.1109.132507
-        version: 2026.1109.132507
+        specifier: 2026.1113.31502
+        version: 2026.1113.31502
       '@qits/edge-golden-masters':
         specifier: 2026.1111.182144
         version: 2026.1111.182144
@@ -69,8 +69,8 @@ importers:
         specifier: 2026.1109.41303
         version: 2026.1109.41303
       '@qits/projects-golden-masters':
-        specifier: 2026.1112.114615
-        version: 2026.1112.114615
+        specifier: 2026.1113.65138
+        version: 2026.1113.65138
       '@storybook/addon-a11y':
         specifier: ^10.5.5
         version: 10.5.5(storybook@10.5.5(@types/react@19.2.18)(prettier@3.9.6)(react@19.2.8))
@@ -2086,21 +2086,25 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
-  '@qits/angular@2026.1112.191035':
-    resolution: {integrity: sha512-ZLJdbgP/xchSjOo/UE2IKjyx19cXeuzZEzSVx5FO1F0J2GOCPHti7Nm8G2Zk6bOuynMSzCN9aT1QgMWj3UMhmQ==}
+  '@qits/angular@2026.1113.80440':
+    resolution: {integrity: sha512-G2dU0Oq1sJ9s/kJpET7GLV2DL0Q1PUUzBDQTHTSjFQ6DsFHPkaTwgVluC/r/jjhqftMKR0FtVttPftX1AhE0mg==}
     hasBin: true
     peerDependencies:
       '@angular/common': ^21.2.0 || ^22.1.0
       '@angular/compiler': ^21.2.0 || ^22.1.0
       '@angular/core': ^21.2.0 || ^22.1.0
       '@angular/router': ^21.2.0 || ^22.1.0
+      '@angular/service-worker': ^21.2.0 || ^22.1.0
       '@ngrx/signals': ^21.0.0 || ^22.0.1
       '@pact-foundation/pact': ^17.1.4
       eslint: ^9.0.0 || ^10.0.0
       rxjs: ^7.4.0
       typescript: ^5.9.0 || ^6.0.0
       vitest: ^4.1.0 || ^5.0.0
+      yaml: ^2.0.0
     peerDependenciesMeta:
+      '@angular/service-worker':
+        optional: true
       '@pact-foundation/pact':
         optional: true
       eslint:
@@ -2109,9 +2113,11 @@ packages:
         optional: true
       vitest:
         optional: true
+      yaml:
+        optional: true
 
-  '@qits/ci-golden-masters@2026.1109.132507':
-    resolution: {integrity: sha512-pS4lwUmOnSAYd+sL/4bOMQj9A9BAeByyQD8vtlUHjVXPrzD60Ayl2SwTAE38FCH/C+TX8+SrbzvSurI50NsVPw==}
+  '@qits/ci-golden-masters@2026.1113.31502':
+    resolution: {integrity: sha512-8BXa8522q0QZhbb6WMkjwCobzuEFzKm6Wvl+CYNSHXJHsp143D3IuHoKXKBeJkItMqbgQhsllDWJSLSXHylfuw==}
 
   '@qits/edge-golden-masters@2026.1111.182144':
     resolution: {integrity: sha512-JTRYJXBcnCmP6NnoDS+9E6OvxAbqDmF5r4tsX576sX2TKEoaWoYFS6dfqnyEQKSF5xqFiihitTOEIaXsq3Ec2A==}
@@ -2119,8 +2125,8 @@ packages:
   '@qits/githost-golden-masters@2026.1109.41303':
     resolution: {integrity: sha512-aCQ2dJ3muPScVdPga3K2ys93hp1hfQhaP6emFyk2J3d2VBW9KNdniA7ldBdpWYwOqQ7udiXz6V7qq1YBafmGLA==}
 
-  '@qits/projects-golden-masters@2026.1112.114615':
-    resolution: {integrity: sha512-7YVqge/YdxAqOJ5YU0jALKTtphG8ROePffzoPhoErdDtOz4leABdGeD+HcsMGetYNyV6/cm8jxcBOkuolFjsnw==}
+  '@qits/projects-golden-masters@2026.1113.65138':
+    resolution: {integrity: sha512-R9wH/Th9iF7POuaheeh/RPpN7GnIiyY3dMh5l94QZVwIf++FeYpjpkC59JuwyshD4h38PxsbmzszXFNET8gp+Q==}
 
   '@rolldown/binding-android-arm64@1.0.0-rc.4':
     resolution: {integrity: sha512-vRq9f4NzvbdZavhQbjkJBx7rRebDKYR9zHfO/Wg486+I7bSecdUapzCm5cyXoK+LHokTxgSq7A5baAXUZkIz0w==}
@@ -7597,7 +7603,7 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@qits/angular@2026.1112.191035(34f714eec35d44626ad04a0c6549402a)':
+  '@qits/angular@2026.1113.80440(34f714eec35d44626ad04a0c6549402a)':
     dependencies:
       '@angular/common': 21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2)
       '@angular/compiler': 21.2.19
@@ -7626,13 +7632,13 @@ snapshots:
       - supports-color
       - zone.js
 
-  '@qits/ci-golden-masters@2026.1109.132507': {}
+  '@qits/ci-golden-masters@2026.1113.31502': {}
 
   '@qits/edge-golden-masters@2026.1111.182144': {}
 
   '@qits/githost-golden-masters@2026.1109.41303': {}
 
-  '@qits/projects-golden-masters@2026.1112.114615': {}
+  '@qits/projects-golden-masters@2026.1113.65138': {}
 
   '@rolldown/binding-android-arm64@1.0.0-rc.4':
     optional: true
