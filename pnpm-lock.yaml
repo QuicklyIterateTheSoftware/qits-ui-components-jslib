@@ -69,8 +69,8 @@ importers:
         specifier: 2026.1109.41303
         version: 2026.1109.41303
       '@qits/projects-golden-masters':
-        specifier: 2026.1113.65138
-        version: 2026.1113.65138
+        specifier: 2026.1113.120648
+        version: 2026.1113.120648
       '@storybook/addon-a11y':
         specifier: ^10.5.5
         version: 10.5.5(storybook@10.5.5(@types/react@19.2.18)(prettier@3.9.6)(react@19.2.8))
@@ -2122,8 +2122,8 @@ packages:
   '@qits/githost-golden-masters@2026.1109.41303':
     resolution: {integrity: sha512-aCQ2dJ3muPScVdPga3K2ys93hp1hfQhaP6emFyk2J3d2VBW9KNdniA7ldBdpWYwOqQ7udiXz6V7qq1YBafmGLA==}
 
-  '@qits/projects-golden-masters@2026.1113.65138':
-    resolution: {integrity: sha512-R9wH/Th9iF7POuaheeh/RPpN7GnIiyY3dMh5l94QZVwIf++FeYpjpkC59JuwyshD4h38PxsbmzszXFNET8gp+Q==}
+  '@qits/projects-golden-masters@2026.1113.120648':
+    resolution: {integrity: sha512-jfUb5VEVJucjcJ4SPsiAbgK1h4qlMyf+LA+SDEZY/JJZSdQYxwFO7m0sthEJpYO4TBgfW6/yE+p6DU2oFUhVNg==}
 
   '@rolldown/binding-android-arm64@1.0.0-rc.4':
     resolution: {integrity: sha512-vRq9f4NzvbdZavhQbjkJBx7rRebDKYR9zHfO/Wg486+I7bSecdUapzCm5cyXoK+LHokTxgSq7A5baAXUZkIz0w==}
@@ -7635,7 +7635,7 @@ snapshots:
 
   '@qits/githost-golden-masters@2026.1109.41303': {}
 
-  '@qits/projects-golden-masters@2026.1113.65138': {}
+  '@qits/projects-golden-masters@2026.1113.120648': {}
 
   '@rolldown/binding-android-arm64@1.0.0-rc.4':
     optional: true
