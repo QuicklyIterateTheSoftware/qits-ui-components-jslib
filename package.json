@@ -1,6 +1,6 @@
 {
   "name": "qits-spa-ui-components",
-  "version": "2026.1115.234733",
+  "version": "2026.1116.51822",
   "private": true,
   "description": "Angular workspace harness for @qits/ui-components. The publishable unit is the ng-packagr output under dist/ — this manifest only builds, tests and lints it.",
   "license": "MIT",
