@@ -649,7 +649,7 @@ describe('QITS_EVENT_SOURCE', () => {
     TestBed.inject(QITS_EVENT_SOURCE)?.('https://events.qits.example/events/api/stream');
 
     expect(opened.map((entry) => entry.url)).toEqual([
-      'https://events.qits.example/events/api/stream',
+      'https://events.qits.example/events/api/stream?ngsw-bypass=true',
     ]);
   });
 
