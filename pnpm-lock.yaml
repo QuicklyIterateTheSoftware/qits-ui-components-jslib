@@ -60,8 +60,8 @@ importers:
         specifier: 2026.1116.150632
         version: 2026.1116.150632(34f714eec35d44626ad04a0c6549402a)
       '@qits/ci-golden-masters':
-        specifier: 2026.1113.31502
-        version: 2026.1113.31502
+        specifier: 2026.1119.60052
+        version: 2026.1119.60052
       '@qits/edge-golden-masters':
         specifier: 2026.1115.212737
         version: 2026.1115.212737
@@ -2113,8 +2113,8 @@ packages:
       yaml:
         optional: true
 
-  '@qits/ci-golden-masters@2026.1113.31502':
-    resolution: {integrity: sha512-8BXa8522q0QZhbb6WMkjwCobzuEFzKm6Wvl+CYNSHXJHsp143D3IuHoKXKBeJkItMqbgQhsllDWJSLSXHylfuw==}
+  '@qits/ci-golden-masters@2026.1119.60052':
+    resolution: {integrity: sha512-H3n3kQb5BsgGzR07nb97eD0D+j2d6aDj18UErcE+vT5yeVaDtdUkWOyIyviev4WnKHriIrgsi7uc2YKeNWDb4A==}
 
   '@qits/edge-golden-masters@2026.1115.212737':
     resolution: {integrity: sha512-8IBeK6Shy6gbPJRHevyOw/nxxP/QRnCq4WkAk7zWzgLNjqx/a5W2++S21OqOjsLwzWSBlkxeqKYjrGVSs/5XBA==}
@@ -7629,7 +7629,7 @@ snapshots:
       - supports-color
       - zone.js
 
-  '@qits/ci-golden-masters@2026.1113.31502': {}
+  '@qits/ci-golden-masters@2026.1119.60052': {}
 
   '@qits/edge-golden-masters@2026.1115.212737': {}
 
