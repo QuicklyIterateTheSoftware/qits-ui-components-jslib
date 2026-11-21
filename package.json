@@ -37,7 +37,7 @@
     "@compodoc/compodoc": "^2.0.0",
     "@eslint/js": "^10.0.1",
     "@pact-foundation/pact": "17.1.4",
-    "@qits/angular": "2026.1116.150632",
+    "@qits/angular": "2026.1121.214147",
     "@qits/ci-golden-masters": "2026.1119.60052",
     "@qits/edge-golden-masters": "2026.1115.212737",
     "@qits/githost-golden-masters": "2026.1109.41303",
