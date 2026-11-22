@@ -41,7 +41,7 @@
     "@qits/ci-golden-masters": "2026.1119.60052",
     "@qits/edge-golden-masters": "2026.1115.212737",
     "@qits/githost-golden-masters": "2026.1109.41303",
-    "@qits/projects-golden-masters": "2026.1116.190952",
+    "@qits/projects-golden-masters": "2026.1122.94922",
     "@storybook/addon-a11y": "^10.5.5",
     "@storybook/addon-docs": "^10.5.5",
     "@storybook/angular-vite": "^10.5.5",
